@@ -11,19 +11,26 @@ import gym
 from myGym import envs
 import myGym.utils.cfg_comparator as cfg
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+#from stable_baselines3.sac.policies import MlpPolicy
+#from stable_baselines3.common.policies import MlpPolicy
+#from stable_baselines3.common.env_util import make_vec_env
+#from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines.bench import Monitor
+#from stable_baselines3.common import results_plotter
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common import make_vec_env
 from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines.bench import Monitor
-from stable_baselines import results_plotter
-from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
+#from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
 # For now I am importing both with slightly modified names P-PyTorch T-TensorFlow
 from stable_baselines import PPO1 as PPO1_T, PPO2 as PPO2_T, HER as HER_T, SAC as SAC_T, DDPG as DDPG_T
-from stable_baselines import TD3 as TD3_T, A2C as A2C_T, ACKTR as ACKTR_T, TRPO as TRPO_T, GAIL as GAIL_T
+from stable_baselines import TD3 as TD3_T, A2C as A2C_T, ACKTR as ACKTR_T, TRPO as TRPO_T #, GAIL as GAIL_T
 try:
     from stable_baselines3 import PPO as PPO_P, A2C as A2C_P, SAC as SAC_P, TD3 as TD3_P
+    print("imported pytorch ppo ")
 except:
     print("Torch isn't probably installed correctly")
+
+from stable_baselines3.common.utils import set_random_seed
 
 from myGym.stable_baselines_mygym.algo import MyAlgo
 from myGym.stable_baselines_mygym.reference import REFER
@@ -34,7 +41,11 @@ from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
 from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
 
 
-from stable_baselines.gail import ExpertDataset, generate_expert_traj
+#from stable_baselines.gail import ExpertDataset, generate_expert_traj
+#from stable_baselines3.sac.policies import MlpPolicy as MlpPolicySAC
+#from stable_baselines3.ddpg.policies import MlpPolicy as MlpPolicyDDPG
+#from stable_baselines3.td3.policies import MlpPolicy as MlpPolicyTD3
+from stable_baselines3.sac.policies import MlpPolicy
 from stable_baselines.sac.policies import MlpPolicy as MlpPolicySAC
 from stable_baselines.ddpg.policies import MlpPolicy as MlpPolicyDDPG
 from stable_baselines.td3.policies import MlpPolicy as MlpPolicyTD3
@@ -95,45 +106,51 @@ def configure_env(arg_dict, model_logdir=None, for_train=True):
     else:
         env_arguments["gui_on"] = arg_dict["gui"]
 
-    if arg_dict["algo"] == "her":
-        env = gym.make(arg_dict["env_name"], **env_arguments, obs_space="dict")  # her needs obs as a dict
-    else:
-        env = gym.make(arg_dict["env_name"], **env_arguments)
+    #if arg_dict["algo"] == "her":
+    #    env = gym.make(arg_dict["env_name"], **env_arguments, obs_space="dict")  # her needs obs as a dict
+    #else:
+    env = gym.make(arg_dict["env_name"], **env_arguments)
     if for_train:
         if arg_dict["engine"] == "mujoco":
             env = VecMonitor(env, model_logdir) if arg_dict["multiprocessing"] else Monitor(env, model_logdir)
         elif arg_dict["engine"] == "pybullet":
             env = Monitor(env, model_logdir, info_keywords=tuple('d'))
 
-    if arg_dict["algo"] == "her":
-        env = HERGoalEnvWrapper(env)
+    #if arg_dict["algo"] == "her":
+    #    env = HERGoalEnvWrapper(env)
     return env
 
 
 def configure_implemented_combos(env, model_logdir, arg_dict):
-    implemented_combos = {"ppo2": {"tensorflow": [PPO2_T, (MlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
-                          "ppo": {"tensorflow": [PPO1_T, (MlpPolicy, env),  {"verbose": 1, "tensorboard_log": model_logdir}],},
-                          "her": {"tensorflow": [HER_T, (MlpPolicyDDPG, env, DDPG_T), {"goal_selection_strategy": 'final', "verbose": 1,"tensorboard_log": model_logdir, "n_sampled_goal": 1}]},
+    implemented_combos = { #"ppo2": {"tensorflow": [PPO2_T, (MlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
+                          #"ppo": {"tensorflow": [PPO1_T, (MlpPolicy, env),  {"verbose": 1, "tensorboard_log": model_logdir}],},
+                          #"her": {"tensorflow": [HER_T, (MlpPolicyDDPG, env, DDPG_T), {"goal_selection_strategy": 'final', "verbose": 1,"tensorboard_log": model_logdir, "n_sampled_goal": 1}]},
                           "sac": {"tensorflow": [SAC_T, (MlpPolicySAC, env), {"verbose": 1, "tensorboard_log": model_logdir}],},
                           "ddpg": {"tensorflow": [DDPG_T, (MlpPolicyDDPG, env),{"verbose": 1, "tensorboard_log": model_logdir}]},
                           "td3": {"tensorflow": [TD3_T, (MlpPolicyTD3, env), {"verbose": 1, "tensorboard_log": model_logdir}],},
                           "acktr": {"tensorflow": [ACKTR_T, (MlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "trpo": {"tensorflow": [TRPO_T, (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "gail": {"tensorflow": [GAIL_T, (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                          #"gail": {"tensorflow": [GAIL_T, (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "a2c":    {"tensorflow": [A2C_T, (MlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}],},
                           "torchppo": {"tensorflow": [TorchPPO, (TorchMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "myalgo": {"tensorflow": [MyAlgo, (MyMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ref":   {"tensorflow": [REFER,  (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multippo2":  {"tensorflow": [MultiPPO2,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
-                          "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]}}
-
-    if "PPO_P" in sys.modules:
-        implemented_combos["ppo"]["pytorch"] = [PPO_P, ('MlpPolicy', env), {"n_steps": 1024, "verbose": 1, "tensorboard_log": model_logdir}]
-        implemented_combos["sac"]["pytorch"] = [SAC_P, ('MlpPolicy', env), {"verbose": 1, "tensorboard_log": model_logdir}]
-        implemented_combos["td3"]["pytorch"] = [TD3_P, ('MlpPolicy', env), {"verbose": 1, "tensorboard_log": model_logdir}]
-        implemented_combos["a2c"]["pytorch"] = [A2C_P, ('MlpPolicy', env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]
+                          "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
+                          "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}}
+                          #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
+    #print("getting ppo P?")
+    #print(sys.modules)
+    #if "PPO_P" or "ppo_p" in sys.modules:
+       # print("--------------------- got ppo P =====================")
+        #implemented_combos["ppo"]["pytorch"] = [PPO_P, ('MlpPolicy', env), {"n_steps": 1024, "verbose": 1, "tensorboard_log": model_logdir}]
+    #    implemented_combos["sac"]["pytorch"] = [SAC_P, ('MlpPolicy', env), {"verbose": 1, "tensorboard_log": model_logdir}]
+    #    implemented_combos["td3"]["pytorch"] = [TD3_P, ('MlpPolicy', env), {"verbose": 1, "tensorboard_log": model_logdir}]
+    #   implemented_combos["a2c"]["pytorch"] = [A2C_P, ('MlpPolicy', env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]
 
     return implemented_combos
+
+
 
 
 def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None):
@@ -161,20 +178,21 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         vec_env = DummyVecEnv([lambda: env])
         model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
     else:
-        model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
+        #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
+        model = PPO_P('MlpPolicy', env,  **model_kwargs )
 
-    if arg_dict["algo"] == "gail":
-        # Multi processing: (using MPI)
-        if arg_dict["train_framework"] == 'tensorflow':
-            # Generate expert trajectories (train expert)
-            generate_expert_traj(model, model_name, n_timesteps=3000, n_episodes=100)
-            # Load the expert dataset
-            dataset = ExpertDataset(expert_path=model_name+'.npz', traj_limitation=10, verbose=1)
-            kwargs = {"verbose":1}
-            if seed is not None:
-                kwargs["seed"] = seed
-            model = GAIL_T('MlpPolicy', model_name, dataset, **kwargs)
-            # Note: in practice, you need to train for 1M steps to have a working policy
+    #if arg_dict["algo"] == "gail":
+    #    # Multi processing: (using MPI)
+    #    if arg_dict["train_framework"] == 'tensorflow':
+    #        # Generate expert trajectories (train expert)
+    #        generate_expert_traj(model, model_name, n_timesteps=3000, n_episodes=100)
+    #        # Load the expert dataset
+    #        dataset = ExpertDataset(expert_path=model_name+'.npz', traj_limitation=10, verbose=1)
+    #        kwargs = {"verbose":1}
+    #        if seed is not None:
+    #            kwargs["seed"] = seed
+    #        model = GAIL_T('MlpPolicy', model_name, dataset, **kwargs)
+    #        # Note: in practice, you need to train for 1M steps to have a working policy
     #if arg_dict["algo"] == "her":
         #model = HER_T('MlpPolicy', env, DDPG_T, n_sampled_goal=1, goal_selection_strategy='future', verbose=1)
         
@@ -202,6 +220,8 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     #with ProgressBarManager(total_timesteps=arg_dict["steps"]) as progress_callback:
     #    callbacks_list.append(progress_callback)
     print("learn started")
+    print(model, callbacks_list,arg_dict["steps"] )
+
     model.learn(total_timesteps=arg_dict["steps"], callback=callbacks_list)
     print("learn ended")
     model.save(os.path.join(model_logdir, model_name))

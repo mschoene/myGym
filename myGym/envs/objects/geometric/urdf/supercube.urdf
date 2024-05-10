@@ -28,7 +28,7 @@
   <link name="heavierCube">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="2"/> <!-- Adjust the mass of the heavier cube as needed -->
+      <mass value="10"/> <!-- Adjust the mass of the heavier cube as needed -->
       <inertia ixx="0.002" ixy="0" ixz="0" iyy="0.002" iyz="0" izz="0.002"/>
     </inertial>
     <visual>
