@@ -1,58 +1,51 @@
-<?xml version="1.0" ?>
-<robot name="supercube.urdf">
-  <link name="baseLink">
+<?xml version="1.0"?>
+<robot name="supercube">
+  <link name="base_link">
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="1"/> <!-- You can adjust the mass as needed -->
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
-    </inertial>
+    <origin rpy="0 0 0" xyz="0 0 0"/> <!-- Adjust if necessary -->
+    <mass value="1.0"/> <!-- Adjust mass according to your needs -->
+    <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/> <!-- Adjust inertia tensor if necessary -->
+  </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <!-- Define the surface geometry for the super cube -->
-        <mesh filename="./obj/supercube.obj" scale="0.1 0.1 0.1"/>
+        <mesh filename="obj/supercube.obj" scale=".0021 .0021 .0021"/> <!-- Adjust filename if necessary -->
       </geometry>
-      <material name="black">
-        <color rgba="0 0 0 1"/>
-      </material>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <!-- Define the collision geometry for the super cube -->
-        <mesh filename="./obj/supercube.obj" scale="0.1 0.1 0.1"/>
+        <mesh filename="obj/supercube.obj" scale=".0021 .0021 .0021"/> <!-- Adjust filename if necessary -->
       </geometry>
     </collision>
   </link>
-  <!-- Define the heavier cube -->
-  <link name="heavierCube">
+
+  <!-- Link representing the heavier cube at a corner -->
+  <link name="heavier_cube">
     <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="10"/> <!-- Adjust the mass of the heavier cube as needed -->
-      <inertia ixx="0.002" ixy="0" ixz="0" iyy="0.002" iyz="0" izz="0.002"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/> <!-- Adjust if necessary -->
+      <mass value="1.13"/> <!-- Increased mass: 10* base cube mass -->
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/> <!-- Adjusted inertia, 10* base inertia since inertia is proportional to mass -->
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <!-- Define the appearance of the heavier cube -->
       <geometry>
-        <!-- Define the visual geometry for the heavier cube -->
-        <box size="0.1 0.1 0.1"/>
+        <mesh filename="obj/cube.obj" scale=".0007 .0007 .0007"/> <!-- 1/3 of supercube size-->
       </geometry>
-      <material name="red">
-        <color rgba="1 0 0 1"/>
-      </material>
+      <!-- <material name="black">  --><!-- Adjust material properties if needed -->
+      <!--   <color rgba="0 0 0 1"/>-->
+      <!-- </material>-->
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <!-- Collision geometry for the heavier cube -->
       <geometry>
-        <!-- Define the collision geometry for the heavier cube -->
-        <box size="0.1 0.1 0.1"/>
+        <mesh filename="obj/cube.obj" scale=".0007 .0007 .0007"/> <!-- 1/3 of supercube size-->
       </geometry>
     </collision>
   </link>
-  <!-- Define the joint between the baseLink and the heavierCube -->
-  <joint name="heavierCubeJoint" type="fixed">
-    <parent link="baseLink"/>
-    <child link="heavierCube"/>
-    <origin rpy="0 0 0" xyz="0 0 0"/>
+
+  <!-- Joint connecting the heavier cube to the base link -->
+  <joint name="heavier_cube_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="heavier_cube"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/> <!-- Adjust if necessary -->
   </joint>
 </robot>

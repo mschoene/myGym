@@ -19,9 +19,9 @@
 #Task
 "task_type"             :"pnp",
 "natural_language"      :0,
-"task_objects"          :[{"init":{"obj_name":"supercube","fixed":0,"rand_rot":0, "sampling_area":[-0.38,-0.38,0.62,0.62,0.1,0.1]},
-                            "goal":{"obj_name":"target","fixed":1,"rand_rot":0, "sampling_area":[-0.05, -0.05, 0.6, 0.6, 0.3,0.3]}},
-                            {"init":{"obj_name":"rectangle","fixed":1,"rand_rot":0 , "sampling_area":[-0.05, -0.05, 0.6, 0.6, 0.05, 0.3]}}],
+"task_objects"          :[{"init":{"obj_name":"supercube","fixed":0,"rand_rot":0, "sampling_area":[-0.38,-0.38,0.62,0.62,0.18,0.18]},
+                            "goal":{"obj_name":"target","fixed":1,"rand_rot":0, "sampling_area":[-0.04, -0.04, 0.6, 0.6, 0.33,0.33]}},
+                            {"init":{"obj_name":"rectangle","fixed":1,"rand_rot":0 , "sampling_area":[-0.05, -0.05, 0.6, 0.6, 0.3, 0.3]}}],
 "color_dict"            : {"cube_holes":["green"], "target":["gray"]},
 "observation"           : {"actual_state":"obj_xyz", "goal_state":"obj_xyz", "additional_obs":["endeff_xyz","touch"]},
 "used_objects"          :{"num_range":[0,0], "obj_list":[]},
@@ -40,7 +40,7 @@
 "num_networks" : 4,
 "max_episode_steps" :512,
 "algo_steps"        :512,
-"steps"             :40000,
+"steps"             :100000,
 "pretrained_model"  :null,
 "multiprocessing"   :false,
 #Evaluation
