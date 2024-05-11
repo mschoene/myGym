@@ -180,6 +180,7 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     else:
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
         model = PPO_P('MlpPolicy', env,  **model_kwargs )
+        print(model.policy)
 
     #if arg_dict["algo"] == "gail":
     #    # Multi processing: (using MPI)
