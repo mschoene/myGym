@@ -1,0 +1,35 @@
+newmtl red_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 1.0 0.0 0.0   # Diffuse color (red)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
+
+newmtl green_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 0.0 1.0 0.0   # Diffuse color (green)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
+
+newmtl blue_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 0.0 0.0 1.0   # Diffuse color (blue)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
+
+newmtl yellow_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 1.0 1.0 0.0   # Diffuse color (yellow)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
+
+newmtl cyan_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 0.0 1.0 1.0   # Diffuse color (cyan)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
+
+newmtl magent_face
+Ka 0.0 0.0 0.0   # Ambient color (black)
+Kd 1.0 0.0 1.0   # Diffuse color (magenta)
+Ks 0.5 0.5 0.5   # Specular color (gray)
+Ns 50.0          # Shininess
