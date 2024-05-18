@@ -11,8 +11,8 @@ import json
 import commentjson
 import sys
 import random
-from pycocotools.cocostuffhelper import segmentationToCocoMask, segmentationToCocoResult
 from pycocotools import mask
+#from pycocotools.cocostuffhelper import segmentationToCocoMask, segmentationToCocoResult
 import pybullet as p
 from bbox import BBox3D
 from myGym.envs.wrappers import RandomizedEnvWrapper
@@ -201,7 +201,7 @@ class GeneratorCoco: #COCO
         """
         Make and append COCO annotations for each object in the scene
         """
-        seg = segmentationToCocoMask(img_mask,object_uid)
+        seg = 0 #TODO coco not working and not using so commenting out segmentationToCocoMask(img_mask,object_uid)
         area = float(mask.area(seg))
         bbox = mask.toBbox(seg).flatten().tolist()
         #1 run length encoding RLE segmentation format
@@ -288,7 +288,7 @@ class GeneratorDope: #DOPE
             changing_light_gui = config['changing_light_gui'],
             shadows_on = config['shadows_on'],
             color_dict = config['color_dict'],
-            object_sampling_area = config['object_sampling_area'],
+            #object_sampling_area = config['object_sampling_area'],
             observation = config["observation"],
             used_objects = used_objects,
             task_objects = config["task_objects"],
@@ -455,7 +455,7 @@ class GeneratorVae:
             changing_light_gui = config['changing_light_gui'],
             shadows_on = config['shadows_on'],
             color_dict = config['color_dict'],
-            object_sampling_area = config['object_sampling_area'],
+            #object_sampling_area = config['object_sampling_area'],
             observation = config["observation"],
             used_objects = used_objects,
             task_objects = config["task_objects"],
@@ -524,10 +524,10 @@ if __name__ == "__main__":
     for x in config['used_class_names_quantity']:
         for _ in range(x[0]):
             used_objects["obj_list"].append({"obj_name":x[1], "fixed":0,"rand_rot":1, "sampling_area":config["object_sampling_area"]})
-    if config['color_dict'] == 'object_colors':
-        color_names_to_rgb()
-        config['texture_randomizer']['exclude'].append("objects")
-        config['color_randomizer']['exclude'].append("objects")
+    #if config['color_dict'] == 'object_colors':
+    #    color_names_to_rgb()
+    #    config['texture_randomizer']['exclude'].append("objects")
+    #    config['color_randomizer']['exclude'].append("objects")
 
     #write config.json to output_folder
     with open(config['output_folder']+'/config_dataset.json', 'w') as f:

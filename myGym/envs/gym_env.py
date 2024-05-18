@@ -117,13 +117,18 @@ class GymEnv(CameraEnv):
         self.vae_path = vae_path
         self.yolact_path = yolact_path
         self.yolact_config = yolact_config
-        self.has_distractor         = distractors["list"] != None
+        if distractors is not None and "list" in distractors:
+            self.has_distractor = distractors["list"] is not None
+        else:
+            self.has_distractor = False
+
+        #self.has_distractor         = distractors["list"] != None
         self.distractors            = distractors
         self.distance_type          = distance_type
         self.objects_area_borders = None
         self.reward = reward
-        self.dist = d.DistractorModule(distractors["moveable"], distractors["movement_endpoints"],
-                                       distractors["constant_speed"], distractors["movement_dims"], env=self)
+        #self.dist = d.DistractorModule(distractors["moveable"], distractors["movement_endpoints"],
+        #                               distractors["constant_speed"], distractors["movement_dims"], env=self)
         self.dataset   = dataset
         self.obs_space = obs_space
         self.visualize = visualize
@@ -172,7 +177,8 @@ class GymEnv(CameraEnv):
             "2-network": {"poke": DualPoke, "pnp": TwoStagePnP, "pnpbgrip": TwoStagePnPBgrip, "push": TwoStagePushReward, "switch": SwitchRewardNew, "turn": TurnRewardNew, "FM": FaM},
             "3-network": {"pnp": ThreeStagePnP, "pnprot": ThreeStagePnPRot, "pnpswipe": ThreeStageSwipe, "FMR": FaMaR,"FROM": FaROaM,  "FMOR": FaMOaR, "FMOT": FaMOaT, "FROT": FaROaT,
                           "pnpswiperot": ThreeStageSwipeRot, "FMOM": FaMOaM},
-            "4-network": {"pnp": FourStagePnP,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR}}
+            "4-network": {"pnp": FourStagePnP,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR},
+            "5-network": {"pnpNstay": FiveStagePnP}}
     
         scheme = "{}-network".format(str(self.num_networks))
         assert self.reward in reward_classes[scheme].keys(), "Failed to find the right reward class. Check reward_classes in gym_env.py"
@@ -184,6 +190,7 @@ class GymEnv(CameraEnv):
                                  distance_type=self.distance_type,
                                  number_tasks=len(self.task_objects_dict),
                                  env=self)
+        print( "Number of subtasks ", self.n_subtasks)
         self.reward = reward_classes[scheme][self.reward](env=self, task=self.task)
 
     def _setup_scene(self):

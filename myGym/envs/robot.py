@@ -75,9 +75,9 @@ class Robot:
             self.gjoints_limits, self.gjoints_ranges, self.gjoints_rest_poses, self.gjoints_max_force, self.gjoints_max_velo = self.get_joints_limits(self.gripper_indices)
         #TODO Clean code (test and gym_env) to initialize just from coordinates
         #if self.robot_action != "joints":
-        self.init_joint_poses = list(self._calculate_accurate_IK(init_joint_poses[:3]))
+        #self.init_joint_poses = list(self._calculate_accurate_IK(init_joint_poses[:3]))
         #else:
-        #self.init_joint_poses = np.zeros((len(self.motor_names)))
+        self.init_joint_poses = np.zeros((len(self.motor_names)))
         #self.reset()
 
     def _load_robot(self):

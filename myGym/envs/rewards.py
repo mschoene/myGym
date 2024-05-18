@@ -3288,8 +3288,8 @@ class DropReward2Stage(PokeReachReward):
         Params:
             :param obj_pos: list of two arrays, current possition and last possition of object.
             :param target_pos: list 
-        Controlls if task was compleated correctly.
-        Contrlolls:
+        Controls if task was completed correctly.
+        Controls:
         - if object was dropped to target,
         - if wasn't thrown.
         """
@@ -3677,6 +3677,7 @@ class ThreeStageSwipe(ThreeStageSwipeRot):
 class FourStagePnP(ThreeStagePnP):
 
     def check_num_networks(self):
+        #print("doing simple 4 stage instead ... why?")
         assert self.num_networks <= 4, "FourStagePnP reward can work with maximum 4 networks"
     
     def above_compute(self, object, goal):
@@ -3775,14 +3776,167 @@ class FourStagePnP(ThreeStagePnP):
             self.current_network = 3
             self.was_above = True
         return self.current_network
+
+
+class FiveStagePnP(ThreeStagePnP):
+    '''Doing 5 reward steps: gripper above obj, griper picking up object, gripper moving object, gripper placing object and releasing, object staying in target place on it's own'''
+
+    def reset(self):
+        super(ThreeStagePnP, self).reset()
+        self.was_above = False
+        self.stay_counter = 0 #counts staying time up to 
+        self.target_stay_time = 50 #max stay time on target
+    
+    def check_num_networks(self): 
+        assert self.num_networks <= 5, "FiveStagePnP reward can work with maximum 4 networks"
+    
+    def above_compute(self, object, goal):
+        # moving object above goal position (forced 2D reach)
+        self.env.p.addUserDebugText("move", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
+        object_XY = object
+        goal_XY   = [goal[0], goal[1], goal[2]+0.2]
+        self.env.p.addUserDebugLine(object_XY, goal_XY, lifeTime=0.1)
+        dist = self.task.calc_distance(object_XY, goal_XY)
+        if self.last_move_dist is None: #or self.last_owner != 1:
+           self.last_move_dist = dist
+        reward = self.last_move_dist - dist
+        self.last_move_dist = dist
+        #ix = 1 if self.num_networks > 1 else 0
+        self.network_rewards[0] += reward
+        return reward
+
+    def find_compute(self, gripper, object):
+        # initial reach
+        self.env.p.addUserDebugText("find object", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[125,0,0])
+        dist = self.task.calc_distance(gripper, object)
+        self.env.p.addUserDebugLine(gripper, object, lifeTime=0.1)
+        if self.last_find_dist is None:
+            self.last_find_dist = dist
+        #if self.last_owner != 0:
+        #    self.last_find_dist = dist
+        reward = self.last_find_dist - dist
+        self.last_find_dist = dist
+        if self.task.check_object_moved(self.env.task_objects["actual_state"], threshold=1.2):
+            self.env.episode_over   = True
+            self.env.episode_failed = True
+            print("set to finished and failed in step 2?")
+        self.network_rewards[1] += reward
+        return reward
+    
+    def move_compute(self, object, goal):
+        # moving object above goal position (forced 2D reach)
+        self.env.p.addUserDebugText("move", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
+        object_XY = object
+        goal_XY   = [goal[0], goal[1], goal[2]+0.2]
+        self.env.p.addUserDebugLine(object_XY, goal_XY, lifeTime=0.1)
+        dist = self.task.calc_distance(object_XY, goal_XY)
+        if self.last_move_dist is None: #or self.last_owner != 1:
+           self.last_move_dist = dist
+        reward = self.last_move_dist - dist
+        self.last_move_dist = dist
+        #ix = 1 if self.num_networks > 1 else 0
+        self.network_rewards[2] += reward
+        return reward
+
+
+    def place_compute(self, object, goal):
+        # reach of goal position + task object height in Z axis and release
+        self.env.p.addUserDebugText("place", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[125,125,0])
+        self.env.p.addUserDebugLine(object, goal, lifeTime=0.1)
+        dist = self.task.calc_distance(object, goal)
+        if self.last_place_dist is None: # or self.last_owner != 2:
+            self.last_place_dist = dist
+        reward = self.last_place_dist - dist
+        reward = reward * 10
+        self.last_place_dist = dist
+        if self.last_owner == 3 and dist < 0.1:
+            self.env.robot.release_all_objects()
+            self.gripped = None
+            self.env.episode_info = "Object was placed to desired position"
+            print("released the cube? robot position is   ",  self.env.robot.get_position()  , self.gripped )
+        if self.env.episode_steps <= 2:
+            self.env.episode_info = "Task finished in initial configuration"
+            print("step   ", self.env.episode_steps )
+            #self.env.episode_over = True
+        self.network_rewards[3] += reward
+        #print("task check goal " ,self.task.check_goal())
+
+        return reward
+
+ 
+    def obj_staying_compute(self, object, goal):
+        self.env.p.addUserDebugText("place", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[125,125,0])
+        self.env.p.addUserDebugLine(object, goal, lifeTime=0.1)
+        dist = self.task.calc_distance(object, goal)
+        
+        print( "step five  1     dist  ", dist,  "  last palce dist " ,  self.last_place_dist) #, "  gripped ", self.gripped  )
+        reward = self.last_place_dist - dist
+        reward = reward * 10
+        if not self.env.robot.gripper_active: #not gripped is better, but not sure if this is sufficient incentive to let go, might need another network
+            reward += 1
+
+        self.last_place_dist = dist
+        print( "step five  2   ", reward, "  dist  ", dist,  "  last palce dist " ,  self.last_place_dist )
+        #self.network_rewards[4] += reward
+        #print("task check goal " ,self.task.check_goal())
+        if dist < 0.1:
+            self.network_rewards[4] += reward
+            self.env.episode_info = "Object stayed on target for 50 timesteps"
+            print("Object stayed on target for 50 timesteps, ending episode successfully")
+
+        #else:
+        #    self.stay_counter +=1
+
+        self.stay_counter +=1
+        if self.stay_counter >= self.target_stay_time:
+            self.env.episode_info = "Object stayed on target for 50 timesteps"
+            self.env.episode_over = True
+            print("Object stayed on target for 50 timesteps, ending episode successfully")
+
+
+        return reward
+
+    def compute(self, observation=None):
+        """
+        Compute reward signal based on distance between 2 objects. The position of the objects must be present in observation.
+
+        Params:
+            :param observation: (list) Observation of the environment
+        Returns:
+            :return reward: (float) Reward signal for the environment
+        """
+        owner = self.decide(observation)
+        goal_position, object_position, gripper_position = self.get_positions(observation)
+        target = [[gripper_position,object_position],[gripper_position,object_position], [object_position, goal_position], [object_position, goal_position], [object_position, goal_position]][owner]
+        reward = [self.above_compute,self.find_compute,self.move_compute, self.place_compute, self.obj_staying_compute][owner](*target)
+        self.last_owner = owner
+        self.task.check_goal()
+        #print("task check goal " ,self.task.check_goal())
+        self.rewards_history.append(reward)
+        return reward
+
+    def decide(self, observation=None):
+        goal_position, object_position, gripper_position = self.get_positions(observation)
+        if self.object_above_goal(gripper_position, object_position) or self.was_above:
+            self.current_network = 1
+        if self.gripper_reached_object(gripper_position, object_position):
+            self.current_network = 2
+        if self.object_above_goal(object_position, goal_position) or self.was_above:
+            self.current_network = 3
+            self.was_above = True
+        if self.task.calc_distance(object_position, goal_position) <0.001 and self.current_network==3 :
+            self.current_network = 4
+        return self.current_network
     
 
 class FourStagePnPmassDistr(ThreeStagePnP):
 
     #TODO add nother objective for mass distribution. 
     def check_num_networks(self):
+        #self.mass_compute
         assert self.num_networks <= 4, "FourStagePnPmassDistr reward can work with maximum 4 networks"
-    
+        #elf.env.p.addUserDebugText("move", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
+
     def above_compute(self, object, goal):
         # moving object above goal position (forced 2D reach)
         self.env.p.addUserDebugText("move", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
@@ -3850,6 +4004,12 @@ class FourStagePnPmassDistr(ThreeStagePnP):
             self.env.episode_over = True
         self.network_rewards[3] += reward
         return reward
+    
+    def mass_compute(self, object, goal):
+        #print(" in mass compute")
+        #print(object)
+        import pdb; pdb.set_trace()
+
 
     def compute(self, observation=None):
         """
@@ -3860,13 +4020,19 @@ class FourStagePnPmassDistr(ThreeStagePnP):
         Returns:
             :return reward: (float) Reward signal for the environment
         """
+        #print("computing mass pnp")
         owner = self.decide(observation)
+        #print(observation)
+        #print(self.env.env_objects)
+        #print('actual  state  ', self.env.env_objects["actual_state"])
         goal_position, object_position, gripper_position = self.get_positions(observation)
         target = [[gripper_position,object_position],[gripper_position,object_position], [object_position, goal_position], [object_position, goal_position]][owner]
+        #print(target)
         reward = [self.above_compute,self.find_compute,self.move_compute, self.place_compute][owner](*target)
         self.last_owner = owner
         self.task.check_goal()
         self.rewards_history.append(reward)
+        self.mass_compute
         return reward
 
     def decide(self, observation=None):
@@ -3878,6 +4044,8 @@ class FourStagePnPmassDistr(ThreeStagePnP):
         if self.object_above_goal(object_position, goal_position) or self.was_above:
             self.current_network = 3
             self.was_above = True
+        self.mass_compute
+
         return self.current_network
     
 

@@ -366,7 +366,8 @@ class BaseEnv(gym.Env):
         """
         Disconnect from the physics server
         """
-        self.p.disconnect()
+        pass
+        #self.p.disconnect()
 
 
 class CameraEnv(BaseEnv):
