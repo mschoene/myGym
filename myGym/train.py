@@ -175,8 +175,9 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         if not os.path.isabs(pretrained_model):
             pretrained_model = pkg_resources.resource_filename("myGym", pretrained_model)
         env = model_args[1]
-        vec_env = DummyVecEnv([lambda: env])
-        model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
+        #vec_env = DummyVecEnv([lambda: env])
+        #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
+        model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
     else:
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
         model = PPO_P('MlpPolicy', env,  **model_kwargs )

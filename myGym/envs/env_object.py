@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os, inspect
 import atexit
 
@@ -39,11 +40,12 @@ class EnvObject:
         self.object_lfriction = 100
         self.object_rfriction = 100
         self.object_mass = 10
-        self. object_stiffness = 1
+        self.object_stiffness = 1
         if not self.virtual:
             self.uid = self.load()
             self.bounding_box = self.get_bounding_box()
             self.centroid = self.get_centroid()
+            #self.moi =self.get... #TODO get moment of inertia
         else:
             self.uid = 1
             self.bounding_box = None

@@ -623,7 +623,7 @@ class GymEnv(CameraEnv):
         pos = env_object.EnvObject.get_random_object_position(obj_info["sampling_area"])
         orn = env_object.EnvObject.get_random_z_rotation() if obj_info["rand_rot"] == 1 else [0, 0, 0, 1]
         object = env_object.EnvObject(obj_info["urdf"], pos, orn, pybullet_client=self.p, fixed=fixed)
-        if self.color_dict: object.set_color(self.color_of_object(object))
+        # if self.color_dict: object.set_color(self.color_of_object(object))
         return object
 
     def _randomly_place_objects(self, object_dict):
@@ -664,7 +664,8 @@ class GymEnv(CameraEnv):
                     d["urdf"] = self._get_urdf_filename(d["obj_name"])
                     n = "actual_state" if o == "init" else "goal_state"
                     env_o = self._place_object(d)
-                    self.highlight_active_object(env_o, o)
+                    # this highlights the init and goal object
+                    # self.highlight_active_object(env_o, o) 
                     env_objects.append({n: env_o})
                 elif d["obj_name"] == "null" and o == "init":
                     env_objects.append({"actual_state": self.robot})
