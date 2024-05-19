@@ -1,5 +1,5 @@
 from stable_baselines.common.policies import ActorCriticPolicy
-from ppo2 import PPO2
+from stable_baselines_mygym.ppo2 import PPO2
 import torch
 import torch.nn as nn
 
@@ -27,9 +27,10 @@ class MassDistributionNN(nn.Module):
     
 
 class MassPPOPolicy(PPO2):
-    def __init__(self,  policy, env, observation_space, action_space, **kwargs):
+    def __init__(self,  policy, env, observation_space, action_space, mass_output_dim=3, **kwargs):
         super(MassPPOPolicy, self).__init__(policy, env)
-        self.mass_distribution_nn = MassDistributionNN(input_dim=observation_space.shape[-1], action_space=action_space, output_dim=3)
+        self.mass_distribution_nn = MassDistributionNN(input_dim=observation_space.shape[-1], action_space=action_space, output_dim=mass_output_dim)
+        self.fc = nn.Linear(observation_space + mass_output_dim, observation_space)
 
     def set_initial_observation(self, init_obs):
         self.init_obs = init_obs
@@ -38,5 +39,6 @@ class MassPPOPolicy(PPO2):
 
         mass_distribution = self.mass_distribution_nn(obs, self.init_obs, past_action)
         new_obs = torch.cat((obs, mass_distribution), dim=-1)
+        new_obs = self.fc(new_obs)
         
         return super(MassPPOPolicy, self).forward(new_obs, deterministic)
