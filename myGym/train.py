@@ -39,7 +39,7 @@ from myGym.stable_baselines_mygym.multi_acktr import MultiACKTR
 from myGym.stable_baselines_mygym.policies import MyMlpPolicy
 from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
 from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
-
+from myGym.stable_baselines_mygym.massPpo import MassPPOPolicy
 
 #from stable_baselines.gail import ExpertDataset, generate_expert_traj
 #from stable_baselines3.sac.policies import MlpPolicy as MlpPolicySAC
@@ -137,7 +137,9 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "ref":   {"tensorflow": [REFER,  (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multippo2":  {"tensorflow": [MultiPPO2,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
-                          "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}}
+                          "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                          "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                        }
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
     #print("getting ppo P?")
     #print(sys.modules)
