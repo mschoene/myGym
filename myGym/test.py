@@ -152,7 +152,7 @@ def detect_key(keypress,arg_dict,action):
 
 def test_env(env, arg_dict):
     spawn_objects = False
-    env.render("human")
+    # env.render("human")
     #env.reset()
     #Prepare names for sliders
     joints = ['Joint1','Joint2','Joint3','Joint4','Joint5','Joint6','Joint7','Joint 8','Joint 9', 'Joint10', 'Joint11','Joint12','Joint13','Joint14','Joint15','Joint16','Joint17','Joint 18','Joint 19']
@@ -232,7 +232,6 @@ def test_env(env, arg_dict):
         for i in range (env.action_space.shape[0]):
             jointparams[i] = p.readUserDebugParameter(joints[i])
             action.append(jointparams[i])
-
     for e in range(50):
         env.reset()
         #if spawn_objects:
@@ -286,7 +285,7 @@ def test_env(env, arg_dict):
 
             
             deg = np.rad2deg(action)
-            print (f"Action:{deg}")
+            # print (f"Action:{deg}")
             observation, reward, done, info = env.step(action)
             
             if arg_dict["vtrajectory"] == True:
@@ -297,7 +296,7 @@ def test_env(env, arg_dict):
                 
                 #visualize_goal(info)
             #if debug_mode:
-            print("Reward: {}  \n Observation: {} \n EnvObservation: {}".format(reward, observation, env.env.observation))
+            # print("Reward: {}  \n Observation: {} \n EnvObservation: {}".format(reward, observation, env.env.observation))
                 #if t>=1:
                     #action = matrix(np.around(np.array(action),5))
                     #oaction = env.env.robot.get_joints_states()

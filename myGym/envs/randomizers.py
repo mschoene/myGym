@@ -225,15 +225,15 @@ class CenterOfMassRandomizer(Randomizer):
 
     def randomize(self):
         # Assuming an initial moment of inertia in the origin
-        # i_moment_inertia = np.array([
-        #     [2/3, -1/4, -1/4],
-        #     [-1/4, 2/3, -1/4],
-        #     [-1/4, -1/4, 2/3]
-        # ])
-        cube = self.randomize_com(9)
-        inertia_tensor = self.get_inertia_tensor(cube)
-        self.env.task_objects[0]["init"]["obj_name"] == "cube"
-        pass
+        # cube = self.randomize_com(9)
+        # inertia_tensor = self.get_inertia_tensor(cube)
+        if self.env.env_objects["actual_state"].get_name() == "cube":
+            cube_uid = self.env.env_objects["actual_state"].get_uid()
+            # they use p on the other classes, i guess p works as a singleton
+            # p.changeDynamics(cube_uid,) TODO: Change the COM
+            print(f"Cube {cube_uid} found and changed")
+        else:
+            print("No cube found")
 
     def discretized_random_cube(self, num_el=9):
         return np.random.rand((num_el, num_el, num_el))

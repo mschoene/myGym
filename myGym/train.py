@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import json, commentjson
 import gym
 from myGym import envs
+from myGym.envs.wrappers import RandomizedEnvWrapper
 import myGym.utils.cfg_comparator as cfg
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 #from stable_baselines3.sac.policies import MlpPolicy
@@ -115,7 +116,9 @@ def configure_env(arg_dict, model_logdir=None, for_train=True):
             env = VecMonitor(env, model_logdir) if arg_dict["multiprocessing"] else Monitor(env, model_logdir)
         elif arg_dict["engine"] == "pybullet":
             env = Monitor(env, model_logdir, info_keywords=tuple('d'))
-
+    else:
+        print(arg_dict["config"])
+        env = RandomizedEnvWrapper(env, arg_dict["config"])
     #if arg_dict["algo"] == "her":
     #    env = HERGoalEnvWrapper(env)
     return env
@@ -306,7 +309,7 @@ def get_arguments(parser):
     with open(args.config, "r") as f:
             arg_dict = commentjson.load(f)
     for key, value in vars(args).items():
-        if value is not None and key is not "config":
+        if value is not None:
             if key in ["robot_init"]:
                 arg_dict[key] = [float(arg_dict[key][i]) for i in range(len(arg_dict[key]))]
             elif key in ["task_objects"]:
