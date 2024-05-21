@@ -30,8 +30,8 @@ class RandomizedEnvWrapper(gym.Wrapper):
             self.active_randomizers.append(randomizers.ColorRandomizer(env, self.config["seed"], **self.config["color_randomizer"]))
         if "joint_randomizer" in self.config:
             self.active_randomizers.append(randomizers.JointRandomizer(env, self.config["seed"], **self.config["joint_randomizer"]))
-        if "mass_randomizer" in self.config:
-            self.active_randomizers.append(randomizers.MassRandomizer(env, self.config["seed"], **self.config["joint_randomizer"]))
+        if "com_randomizer" in self.config:
+            self.active_randomizers.append(randomizers.CenterOfMassRandomizer(env, self.config["seed"], **self.config["com_randomizer"]))
 
     def randomize(self):
         """

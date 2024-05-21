@@ -49,5 +49,10 @@
 "eval_episodes" :30,
 #Saving and logging
 "logdir"    :"trained_models/pnp_franka_weighing",
-"record"    :0
+"record"    :0,
+"com_randomizer": {
+    "enabled": true,
+    "mass": 1,
+    "side": 0.1
+  }
 }

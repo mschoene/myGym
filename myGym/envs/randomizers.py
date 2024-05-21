@@ -232,6 +232,7 @@ class CenterOfMassRandomizer(Randomizer):
         # ])
         cube = self.randomize_com(9)
         inertia_tensor = self.get_inertia_tensor(cube)
+        self.env.task_objects[0]["init"]["obj_name"] == "cube"
         pass
 
     def discretized_random_cube(self, num_el=9):
