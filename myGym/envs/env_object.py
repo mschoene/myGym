@@ -26,12 +26,13 @@ class EnvObject:
         :param pybullet_client: Which pybullet client the environment should refere to in case of parallel existence of multiple instances of this environment
     """
     def __init__(self, urdf_path, position=[0, 0, 0],
-                 orientation=[0, 0, 0, 0], fixed=False,
+                 orientation=[0, 0, 0, 0], fixed=False, com_pos =[0,0,0],
                  pybullet_client=None):
         self.p = pybullet_client
         self.urdf_path = urdf_path
         self.init_position = position
         self.init_orientation = orientation
+        self.init_com_pos = com_pos #center of mass shift
         self.fixed = fixed
         self.name = os.path.splitext(os.path.basename(self.urdf_path))[0]
         self.virtual = True if "virtual" in self.name else False
@@ -248,6 +249,7 @@ class EnvObject:
         Returns:
             :return centeroid: (array) Position of object's centroid (center of mass) ([x,y,z])
         """
+        print("com ", self.p.getBasePositionAndOrientation(self.uid)[0])
         return self.p.getBasePositionAndOrientation(self.uid)[0]
 
     def draw_bounding_box(self):
@@ -337,6 +339,29 @@ class EnvObject:
         pos.append(random.uniform(boarders[2], boarders[3])) #y
         pos.append(random.uniform(boarders[4], boarders[5])) #z
         return pos
+
+    @staticmethod
+    def get_random_object_com(boarders):
+        """
+        Generate random center of mass (com). make sure it is inside the volume
+
+        Parameters:
+            :param boarders: (list) xyz coordinate bounds, where position may be generated ([x,x,y,y,z,z])
+        Returns:
+            :return pos: (list) Position in specified volume ([x,y,z])
+        """
+
+        #print(self.p.getBasePositionAndOrientation(self.uid)[0] )
+
+        if any(isinstance(i, list) for i in boarders):
+            boarders = boarders[random.randint(0,len(boarders)-1)]
+        com_pos = []
+        com_pos.append(random.uniform(boarders[0], boarders[1])) #x
+        com_pos.append(random.uniform(boarders[2], boarders[3])) #y
+        com_pos.append(random.uniform(boarders[4], boarders[5])) #z
+        return com_pos
+    
+
 
     @staticmethod
     def get_random_object_orientation():

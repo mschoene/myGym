@@ -629,7 +629,10 @@ class GymEnv(CameraEnv):
         fixed = True if obj_info["fixed"] == 1 else False
         pos = env_object.EnvObject.get_random_object_position(obj_info["sampling_area"])
         orn = env_object.EnvObject.get_random_z_rotation() if obj_info["rand_rot"] == 1 else [0, 0, 0, 1]
-        object = env_object.EnvObject(obj_info["urdf"], pos, orn, pybullet_client=self.p, fixed=fixed)
+        #random center of mass
+        com = env_object.EnvObject.get_random_object_com() if obj_info["rand_com"] == 1 else [0, 0, 0]
+        print(com)
+        object = env_object.EnvObject(obj_info["urdf"], pos, orn, pybullet_client=self.p, fixed=fixed, com_pos = com)
         # if self.color_dict: object.set_color(self.color_of_object(object))
         return object
 
