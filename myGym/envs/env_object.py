@@ -11,6 +11,9 @@ import numpy as np
 import sys, shutil
 from datetime import datetime
 import pkg_resources
+from lxml import etree
+
+
 currentdir = pkg_resources.resource_filename("myGym", "envs")
 
 
@@ -40,13 +43,18 @@ class EnvObject:
         self.object_adamping = 1
         self.object_lfriction = 100
         self.object_rfriction = 100
-        self.object_mass = 10
+        self.object_mass = self.read_mass_from_urdf()
         self.object_stiffness = 1
         if not self.virtual:
+            if( com_pos != [0,0,0]):
+                #this will create a new temporary urdf file with a shifted com.. beautiful solution, I know...
+                self.update_urdf_com() # Sets URDF path to temporary one with shifted COM
             self.uid = self.load()
+
+            #self.update_collision_and_visual_shapes()
             self.bounding_box = self.get_bounding_box()
             self.centroid = self.get_centroid()
-            #self.moi =self.get... #TODO get moment of inertia
+
         else:
             self.uid = 1
             self.bounding_box = None
@@ -54,6 +62,26 @@ class EnvObject:
         self.debug_line_ids = []
         self.cuboid_dimensions = None
 
+
+    def read_mass_from_urdf(self):
+        # Parse the URDF file to find the mass
+        tree = etree.parse(self.urdf_path)
+        root = tree.getroot()
+
+        # Find the <inertial> tag
+        inertial_tag = root.find(".//inertial")
+        if inertial_tag is not None:
+            # Find the <mass> tag within <inertial>
+            mass_tag = inertial_tag.find("mass")
+            if mass_tag is not None:
+                # Extract the mass value from the 'value' attribute
+                mass_value = mass_tag.attrib.get("value")
+                if mass_value is not None:
+                    return float(mass_value)
+
+        # Return a default mass if not found
+        return 1.0  # Default mass
+    
     def set_color(self, color):
         """
         Set desired color of object
@@ -204,6 +232,35 @@ class EnvObject:
     def set_texture(self, texture):
         pass
 
+
+    def update_urdf_com(self):
+        # Get the directory of the original URDF file
+        urdf_dir = os.path.dirname(self.urdf_path)
+
+        # Create a temporary file path for the modified URDF file
+        tmp_urdf_path = os.path.join(urdf_dir, "obj_temp.urdf")
+
+        # Copy the original URDF file to the temporary file
+        shutil.copyfile(self.urdf_path, tmp_urdf_path)
+
+        # Parse the copied URDF file to identify collision shapes associated with the base link
+        tree = etree.parse(tmp_urdf_path)
+        root = tree.getroot()
+        link = root.find(".//link[@name='baseLink']")
+        inertial = link.find("inertial")
+        origin = inertial.find("origin")
+        if origin is not None:
+            xyz = origin.attrib.get("xyz", "0 0 0")
+            xyz = [float(x) for x in xyz.split()]
+            new_xyz = [xyz[i] - self.init_com_pos[i] for i in range(3)]
+            origin.attrib["xyz"] = " ".join(str(x) for x in new_xyz)
+
+        # Write the modified URDF to the temporary file
+        tree.write(tmp_urdf_path)
+
+        # Load the object using the modified URDF path
+        self.urdf_path = tmp_urdf_path
+
     def load(self):
         """
         Load object from it's model to the scene
@@ -221,7 +278,7 @@ class EnvObject:
                                 rollingFriction=self.object_rfriction, mass=self.object_mass)
         
         return self.uid
-
+    
     def get_bounding_box(self):
         """
         Get 3D axis-aligned bounding box of object
@@ -249,7 +306,6 @@ class EnvObject:
         Returns:
             :return centeroid: (array) Position of object's centroid (center of mass) ([x,y,z])
         """
-        print("com ", self.p.getBasePositionAndOrientation(self.uid)[0])
         return self.p.getBasePositionAndOrientation(self.uid)[0]
 
     def draw_bounding_box(self):
@@ -350,9 +406,6 @@ class EnvObject:
         Returns:
             :return pos: (list) Position in specified volume ([x,y,z])
         """
-
-        #print(self.p.getBasePositionAndOrientation(self.uid)[0] )
-
         if any(isinstance(i, list) for i in boarders):
             boarders = boarders[random.randint(0,len(boarders)-1)]
         com_pos = []
@@ -361,8 +414,6 @@ class EnvObject:
         com_pos.append(random.uniform(boarders[4], boarders[5])) #z
         return com_pos
     
-
-
     @staticmethod
     def get_random_object_orientation():
         """
