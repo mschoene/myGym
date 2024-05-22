@@ -152,7 +152,7 @@ def detect_key(keypress,arg_dict,action):
 
 def test_env(env, arg_dict):
     spawn_objects = False
-    env.render("human")
+    # env.render("human")
     #env.reset()
     #Prepare names for sliders
     joints = ['Joint1','Joint2','Joint3','Joint4','Joint5','Joint6','Joint7','Joint 8','Joint 9', 'Joint10', 'Joint11','Joint12','Joint13','Joint14','Joint15','Joint16','Joint17','Joint 18','Joint 19']
@@ -232,7 +232,6 @@ def test_env(env, arg_dict):
         for i in range (env.action_space.shape[0]):
             jointparams[i] = p.readUserDebugParameter(joints[i])
             action.append(jointparams[i])
-
     for e in range(50):
         env.reset()
         #if spawn_objects:

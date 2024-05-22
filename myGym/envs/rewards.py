@@ -3788,7 +3788,7 @@ class FiveStagePnP(ThreeStagePnP):
         self.target_stay_time = 50 #max stay time on target
     
     def check_num_networks(self): 
-        assert self.num_networks <= 5, "FiveStagePnP reward can work with maximum 4 networks"
+        assert self.num_networks <= 5, "FiveStagePnP reward can work with maximum 5 networks"
     
     def above_compute(self, object, goal):
         # moving object above goal position (forced 2D reach)

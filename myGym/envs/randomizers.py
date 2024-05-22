@@ -215,7 +215,56 @@ class JointRandomizer(Randomizer):
             #                         force=200)
 
 
+class CenterOfMassRandomizer(Randomizer):
 
+    def __init__(self, env, seed, enabled, mass, side):
+        super(CenterOfMassRandomizer, self).__init__(env, seed, enabled)
+        self.mass = mass
+        self.side = side
+
+
+    def randomize(self):
+        # Assuming an initial moment of inertia in the origin
+        # cube = self.randomize_com(9)
+        # inertia_tensor = self.get_inertia_tensor(cube)
+        if self.env.env_objects["actual_state"].get_name() == "cube":
+            cube_uid = self.env.env_objects["actual_state"].get_uid()
+            # they use p on the other classes, i guess p works as a singleton
+            # p.changeDynamics(cube_uid,) TODO: Change the COM
+            print(f"Cube {cube_uid} found and changed")
+        else:
+            print("No cube found")
+
+    def discretized_random_cube(self, num_el=9):
+        return np.random.rand((num_el, num_el, num_el))
+    
+    def randomize_com(self, num_el):
+
+        disc_cube = self.discretized_random_cube(num_el)
+        sum_cube = np.sum(disc_cube)
+        norm_cube = disc_cube / sum_cube
+        norm_cube *= self.mass
+        return norm_cube
+        
+    def get_inertia_tensor(self, disc_cube):
+
+        sub_com = (self.side/disc_cube.shape[-1])/2
+
+        x, y, z = np.meshgrid(np.arange(disc_cube.shape[0]) + sub_com,
+                              np.arange(disc_cube.shape[1])[::-1] + sub_com,
+                              np.arange(disc_cube.shape[2]) + sub_com,
+                              indexing='ij')
+
+
+        inertia_tensor = np.zeros((3,3))
+        inertia_tensor[0, 0] = np.sum(disc_cube * (y**2 + z**2))
+        inertia_tensor[1, 1] = np.sum(disc_cube * (x**2 + y**2))
+        inertia_tensor[2, 2] = np.sum(disc_cube * (x**2 + y**2))
+        inertia_tensor[0,1] = inertia_tensor[1, 0] = -np.sum(disc_cube * x * y)
+        inertia_tensor[0,2] = inertia_tensor[2, 0] = -np.sum(disc_cube * x * z)
+        inertia_tensor[1,2] = inertia_tensor[2, 1] = -np.sum(disc_cube * y * z)
+        return inertia_tensor
+        
 
 
 class PostprocessingRandomizer(Randomizer):
