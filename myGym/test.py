@@ -286,7 +286,7 @@ def test_env(env, arg_dict):
 
             
             deg = np.rad2deg(action)
-            print (f"Action:{deg}")
+            #TODO revertprint (f"Action:{deg}")
             observation, reward, done, info = env.step(action)
             
             if arg_dict["vtrajectory"] == True:
@@ -297,7 +297,7 @@ def test_env(env, arg_dict):
                 
                 #visualize_goal(info)
             #if debug_mode:
-            print("Reward: {}  \n Observation: {} \n EnvObservation: {}".format(reward, observation, env.env.observation))
+            #TODO revert print("Reward: {}  \n Observation: {} \n EnvObservation: {}".format(reward, observation, env.env.observation))
                 #if t>=1:
                     #action = matrix(np.around(np.array(action),5))
                     #oaction = env.env.robot.get_joints_states()
