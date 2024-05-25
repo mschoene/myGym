@@ -156,7 +156,7 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
                         }
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
@@ -197,7 +197,8 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         #vec_env = DummyVecEnv([lambda: env])
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
         #model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
-        model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+        #model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
         #model = CustomPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
         #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
     else:
@@ -208,7 +209,7 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         #model = RecurrentPPO("MlpLstmPolicy", env,  **model_kwargs )
         #model = PPO_P('MlpPolicy', env,  **model_kwargs )
         #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs )
-
+        print(model.policy)
 
     #if arg_dict["algo"] == "gail":
     #    # Multi processing: (using MPI)

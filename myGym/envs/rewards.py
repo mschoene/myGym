@@ -2879,20 +2879,27 @@ class SingleStagePnPnStay(DistanceReward):
         Returns:
             :return reward: (float) Reward signal for the environment
         """
-        o1 = observation["actual_state"]
-        o2 = observation["goal_state"]
-        if self.gripper_reached_object(observation):
+        obs_xyz = self.repackage_observation(observation) #we're working with 6d info for com
+        o1 = obs_xyz["actual_state"]
+        o2 = obs_xyz["goal_state"]
+        #print(observation)
+        if self.gripper_reached_object(obs_xyz):
             self.before_pick = False
         reward = self.calc_dist_diff(o1, o2)
+        #print("reward  ", reward, "   obs state ", o1, "  obs goal ", o2)
         if self.task.calc_distance(o1, o2) < 0.1 and self.placed_obj==False:
             self.env.robot.release_all_objects()
             self.placed_obj = True
             print("placed object ")
+            if not self.env.robot.gripper_active: #not gripped is better, but not sure if this is sufficient incentive to let go, might need another network
+                reward += 10
+                print("letting go of cube? ",self.env.robot.gripper_active )
+
         if(self.placed_obj and self.task.calc_distance(o1, o2) < 0.1 ):
             print("staying on target for ", self.atGoal_timesteps , " timesteps ")
             self.atGoal_timesteps += 1
-            reward *= 10. #give more reward for staying at the goal for extra incentive
-        if(self.atGoal_timesteps >= self.stay_timesteps):
+            reward += 10. #give more reward for staying at the goal for extra incentive
+        if(self.atGoal_timesteps >= self.stay_timesteps and self.placed_obj == True):
             print("stayed 50 timesteps on target, successsssss")
             self.env.episode_over = True #not sure if this i needed explicitly since task.check_goal aready does this
         self.task.check_goal(self.atGoal_timesteps, self.stay_timesteps)
@@ -2921,6 +2928,18 @@ class SingleStagePnPnStay(DistanceReward):
         self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
         self.placed_obj = False
 
+    def repackage_observation(self, obs):
+        # Extract the first three entries of actual_state and goal_state
+        actual_state_xyz = obs['actual_state'][:3]
+        goal_state_xyz = obs['goal_state'][:3]
+    
+        # Create a new dictionary with the required entries
+        observation_xyz = {
+            'actual_state': actual_state_xyz,
+            'goal_state': goal_state_xyz,
+            'additional_obs': obs['additional_obs']
+        }
+        return observation_xyz
 
 class SingleStagePnP(DistanceReward):
     """
