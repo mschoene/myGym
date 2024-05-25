@@ -14,13 +14,13 @@ import myGym.utils.cfg_comparator as cfg
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 #from stable_baselines3.sac.policies import MlpPolicy
 #from stable_baselines3.common.policies import MlpPolicy
-#from stable_baselines3.common.env_util import make_vec_env
-#from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines.bench import Monitor
 #from stable_baselines3.common import results_plotter
 from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.vec_env import DummyVecEnv
+#from stable_baselines.common import make_vec_env
+#from stable_baselines.common.vec_env import DummyVecEnv
 #from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
 # For now I am importing both with slightly modified names P-PyTorch T-TensorFlow
 from stable_baselines import PPO1 as PPO1_T, PPO2 as PPO2_T, HER as HER_T, SAC as SAC_T, DDPG as DDPG_T
@@ -37,10 +37,14 @@ from myGym.stable_baselines_mygym.algo import MyAlgo
 from myGym.stable_baselines_mygym.reference import REFER
 from myGym.stable_baselines_mygym.multi_ppo2 import MultiPPO2
 from myGym.stable_baselines_mygym.multi_acktr import MultiACKTR
-from myGym.stable_baselines_mygym.policies import MyMlpPolicy
-from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
-from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
+#from myGym.stable_baselines_mygym.policies import MyMlpPolicy
+#from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
+#from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
 from myGym.stable_baselines_mygym.massPpo import MassPPOPolicy
+from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPolicy as CustomLSTMPolicy
+from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPPO as CustomPPO
+from myGym.stable_baselines_mygym.policies import MlpLstmPolicyCMO as RecurPoliCOM
+from myGym.stable_baselines_mygym.ppo_recurrent import RecurrentPPO as RecurPPOCOM
 
 #from stable_baselines.gail import ExpertDataset, generate_expert_traj
 #from stable_baselines3.sac.policies import MlpPolicy as MlpPolicySAC
@@ -54,6 +58,16 @@ from stable_baselines.td3.policies import MlpPolicy as MlpPolicyTD3
 # Import helper classes and functions for monitoring
 from myGym.utils.callbacks import ProgressBarManager, SaveOnBestTrainingRewardCallback,  PlottingCallback, CustomEvalCallback
 from myGym.envs.natural_language import NaturalLanguage
+
+
+from sb3_contrib import RecurrentPPO
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import vec_transpose
+from gym.wrappers import TimeLimit
+
+from sb3_contrib.common.recurrent.policies import RecurrentActorCriticPolicy
+
+
 
 # This is global variable for the type of engine we are working with
 AVAILABLE_SIMULATION_ENGINES = ["mujoco", "pybullet"]
@@ -135,17 +149,17 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "trpo": {"tensorflow": [TRPO_T, (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           #"gail": {"tensorflow": [GAIL_T, (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "a2c":    {"tensorflow": [A2C_T, (MlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}],},
-                          "torchppo": {"tensorflow": [TorchPPO, (TorchMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
-                          "myalgo": {"tensorflow": [MyAlgo, (MyMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
+                          #"torchppo": {"tensorflow": [TorchPPO, (TorchMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
+                          #"myalgo": {"tensorflow": [MyAlgo, (MyMlpPolicy, env), {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ref":   {"tensorflow": [REFER,  (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multippo2":  {"tensorflow": [MultiPPO2,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
                         }
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
-    #print("getting ppo P?")
-    #print(sys.modules)
     #if "PPO_P" or "ppo_p" in sys.modules:
        # print("--------------------- got ppo P =====================")
         #implemented_combos["ppo"]["pytorch"] = [PPO_P, ('MlpPolicy', env), {"n_steps": 1024, "verbose": 1, "tensorboard_log": model_logdir}]
@@ -167,9 +181,9 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     with open(conf_pth, "w") as f:
         json.dump(arg_dict, f, indent=4)
 
-    print("WWWWWWWWWWWWWWWWWWWWWW")
-    print(env)
-    print("WWWWWWWWWWWWWWWWWWWWWW")
+    #print("WWWWWWWWWWWWWWWWWWWWWW")
+    #print(env)
+    #print("WWWWWWWWWWWWWWWWWWWWWW")
     model_args = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][1]
     model_kwargs = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][2]
     if seed is not None:
@@ -182,11 +196,19 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         env = model_args[1]
         #vec_env = DummyVecEnv([lambda: env])
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
-        model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        #model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        #model = CustomPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
     else:
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
-        model = PPO_P('MlpPolicy', env,  **model_kwargs )
-        print(model.policy)
+        #model = CustomPPO(CustomLSTMPolicy, env,  **model_kwargs ) 
+        #assert isinstance(env, DummyVecEnv), f"Training env is not DummyVecEnv but {type(env)}"
+        model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+        #model = RecurrentPPO("MlpLstmPolicy", env,  **model_kwargs )
+        #model = PPO_P('MlpPolicy', env,  **model_kwargs )
+        #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs )
+
 
     #if arg_dict["algo"] == "gail":
     #    # Multi processing: (using MPI)
@@ -216,6 +238,7 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     if arg_dict["eval_freq"]:
         #eval_env = configure_env(arg_dict, model_logdir, for_train=False)
         eval_env = env
+        #eval_env = vec_transpose.VecTransposeImage(env)
         eval_callback = CustomEvalCallback(eval_env, log_path=model_logdir,
                                            eval_freq=arg_dict["eval_freq"],
                                            algo_steps=arg_dict["algo_steps"],
@@ -227,8 +250,7 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     #with ProgressBarManager(total_timesteps=arg_dict["steps"]) as progress_callback:
     #    callbacks_list.append(progress_callback)
     print("learn started")
-    print(model, callbacks_list,arg_dict["steps"] )
-
+    #print(model, callbacks_list,arg_dict["steps"] )
     model.learn(total_timesteps=arg_dict["steps"], callback=callbacks_list)
     print("learn ended")
     model.save(os.path.join(model_logdir, model_name))
