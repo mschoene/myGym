@@ -418,8 +418,13 @@ class GymEnv(CameraEnv):
 
     def shift_next_subtask(self):
         # put current init and goal back in env_objects
+        print(f"Shif next subtask index: {self.task.current_task}")
+        print("Env object: ", self.env_objects["distractor"][0])
+        if self.env_objects["distractor"][0] == "past_object":
+            self.env_objects["distractor"][0] = self.env_objects["actual_state"]
         self.env_objects["distractor"].extend([self.env_objects["actual_state"], self.env_objects["goal_state"]])
         # set the next subtask objects as the actual and goal state and remove them from env_objects
+        # if self.env_objects[]
         self.env_objects["actual_state"] = self.env_objects["distractor"][0]
         self.env_objects["goal_state"] = self.env_objects["distractor"][1]
         del self.env_objects["distractor"][:2]
@@ -630,7 +635,7 @@ class GymEnv(CameraEnv):
         pos = env_object.EnvObject.get_random_object_position(obj_info["sampling_area"])
         orn = env_object.EnvObject.get_random_z_rotation() if obj_info["rand_rot"] == 1 else [0, 0, 0, 1]
         #random center of mass
-        com = env_object.EnvObject.get_random_object_com(obj_info["rand_com"]) if obj_info["rand_com"] != 0 else [0, 0, 0]
+        com = env_object.EnvObject.get_random_object_com(obj_info["rand_com"]) if "rand_com" in obj_info else [0, 0, 0]
         object = env_object.EnvObject(obj_info["urdf"], pos, orn, pybullet_client=self.p, fixed=fixed, com_pos = com)
         # if self.color_dict: object.set_color(self.color_of_object(object))
         return object
@@ -649,7 +654,7 @@ class GymEnv(CameraEnv):
         env_objects = []
         if not "init" in object_dict.keys():  # solves used_objects
             for idx, o in enumerate(object_dict["obj_list"]):
-                  if o["obj_name"] != "null":
+                  if o["obj_name"] != "null" and o["obj_name"] != "reuse_past_object":
                       urdf = self._get_urdf_filename(o["obj_name"])
                       if urdf:
                         object_dict["obj_list"][idx]["urdf"] = urdf
@@ -662,14 +667,14 @@ class GymEnv(CameraEnv):
                     env_objects.append(env_o)
             else:
                 for o in object_dict["obj_list"]:
-                    if o["obj_name"] != "null":
+                    if o["obj_name"] != "null" and o["obj_name"] != "reuse_past_object":
                         env_o = self._place_object(o)
                         self.highlight_active_object(env_o, "other")
                         env_objects.append(env_o)
         else:  # solves task_objects
             for o in ['init', 'goal']:
                 d = object_dict[o]
-                if d["obj_name"] != "null":
+                if d["obj_name"] != "null" and d["obj_name"] != "reuse_past_object":
                     d["urdf"] = self._get_urdf_filename(d["obj_name"])
                     n = "actual_state" if o == "init" else "goal_state"
                     env_o = self._place_object(d)
@@ -678,6 +683,8 @@ class GymEnv(CameraEnv):
                     env_objects.append({n: env_o})
                 elif d["obj_name"] == "null" and o == "init":
                     env_objects.append({"actual_state": self.robot})
+                elif d["obj_name"] == "reuse_past_object" and o == "init":
+                    env_objects.append({"actual_state": "past_object"})
         return env_objects
 
     def highlight_active_object(self, env_o, obj_role):

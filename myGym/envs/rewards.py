@@ -3781,18 +3781,24 @@ class FourStagePnP(ThreeStagePnP):
 class FiveStagePnP(ThreeStagePnP):
     '''Doing 5 reward steps: gripper above obj, griper picking up object, gripper moving object, gripper placing object and releasing, object staying in target place on it's own'''
 
+    def __init__(self, env, task, num_obj_int=3):
+        super(FiveStagePnP, self).__init__(env, task)
+        self.obj_int_i = num_obj_int
+        self.obj_curr_int_i = 0
+
     def reset(self):
         super(ThreeStagePnP, self).reset()
         self.was_above = False
         self.stay_counter = 0 #counts staying time up to 
         self.target_stay_time = 50 #max stay time on target
+        self.obj_curr_int_i = 0
     
     def check_num_networks(self): 
         assert self.num_networks <= 5, "FiveStagePnP reward can work with maximum 5 networks"
     
     def above_compute(self, object, goal):
         # moving object above goal position (forced 2D reach)
-        self.env.p.addUserDebugText("move", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
+        self.env.p.addUserDebugText("above", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[0,0,125])
         object_XY = object
         goal_XY   = [goal[0], goal[1], goal[2]+0.2]
         self.env.p.addUserDebugLine(object_XY, goal_XY, lifeTime=0.1)
@@ -3896,6 +3902,10 @@ class FiveStagePnP(ThreeStagePnP):
 
         return reward
 
+    def obj_play_compute(self, gripper, object):
+        for _ in range(3):
+            pass
+
     def compute(self, observation=None):
         """
         Compute reward signal based on distance between 2 objects. The position of the objects must be present in observation.
@@ -3917,15 +3927,24 @@ class FiveStagePnP(ThreeStagePnP):
 
     def decide(self, observation=None):
         goal_position, object_position, gripper_position = self.get_positions(observation)
-        if self.object_above_goal(gripper_position, object_position) or self.was_above:
-            self.current_network = 1
-        if self.gripper_reached_object(gripper_position, object_position):
-            self.current_network = 2
-        if self.object_above_goal(object_position, goal_position) or self.was_above:
-            self.current_network = 3
-            self.was_above = True
-        if self.task.calc_distance(object_position, goal_position) <0.001 and self.current_network==3 :
-            self.current_network = 4
+        if self.obj_curr_int_i < self.obj_int_i:
+            if self.object_above_goal(gripper_position, object_position) or self.was_above:
+                self.current_network = 1
+            if self.gripper_reached_object(gripper_position, object_position):
+                self.current_network = 2
+            if self.object_above_goal(object_position, goal_position) or self.was_above:
+                self.current_network = 0
+                self.obj_curr_int_i += 1
+        else:
+            if self.object_above_goal(gripper_position, object_position) or self.was_above:
+                self.current_network = 1
+            if self.gripper_reached_object(gripper_position, object_position):
+                self.current_network = 2
+            if self.object_above_goal(object_position, goal_position) or self.was_above:
+                self.current_network = 3
+                self.was_above = True
+            if self.task.calc_distance(object_position, goal_position) <0.001 and self.current_network==3 :
+                self.current_network = 4
         return self.current_network
     
 

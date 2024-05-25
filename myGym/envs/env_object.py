@@ -62,6 +62,8 @@ class EnvObject:
         self.debug_line_ids = []
         self.cuboid_dimensions = None
 
+    def __repr__(self):
+        return self.name
 
     def read_mass_from_urdf(self):
         # Parse the URDF file to find the mass
