@@ -204,6 +204,16 @@ class TaskModule():
         self.current_norm_distance = self.calc_distance(observation["goal_state"], observation["actual_state"])
         return self.current_norm_distance < threshold
     
+    def check_distance_threshold_and_time(self, observation, threshold=0.1, time_steps=0, time_step_threshold =50):
+        """
+        Check if the distance between relevant task objects is under threshold for successful task completion
+        Returns:
+            :return: (bool)
+        """
+        self.current_norm_distance = self.calc_distance(observation["goal_state"], observation["actual_state"])
+
+        return (self.current_norm_distance < threshold and time_steps>= time_step_threshold )
+    
     def check_distrot_threshold(self, observation, threshold=0.1):
         """
         Check if the distance between relevant task objects is under threshold for successful task completion
@@ -309,13 +319,15 @@ class TaskModule():
         else: 
             return False
 
-    def check_goal(self):
+    def check_goal(self,time_steps=0, time_step_threshold =50 ):
         """
         Check if goal of the task was completed successfully
         """
         
         finished = None
-        if self.task_type in ['reach', 'poke', 'pnp', 'pnpbgrip', 'FMOT', 'FROM', 'FROT', 'FMOM', 'FM','F']: #all tasks ending with R (FMR) have to have distrot checker
+        if self.task_type in ['pnp']: #all tasks ending with R (FMR) have to have distrot checker
+            finished = self.check_distance_threshold_and_time(self._observation,  time_steps=0, time_step_threshold =50)  
+        if self.task_type in ['reach', 'poke', 'pnpbgrip', 'FMOT', 'FROM', 'FROT', 'FMOM', 'FM','F']: #all tasks ending with R (FMR) have to have distrot checker
             finished = self.check_distance_threshold(self._observation)  
         if self.task_type in ['pnprot','pnpswipe','FMR', 'FMOR', 'FMLFR', 'compositional']:
             finished = self.check_distrot_threshold(self._observation)  

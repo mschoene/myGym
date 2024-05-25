@@ -2854,6 +2854,74 @@ class DualPoke(PokeReachReward):
         return distance
 
 # pick and place rewards
+class SingleStagePnPnStay(DistanceReward):
+    """
+    Pick and place with simple Distance reward. The gripper is operated automatically.
+    Applicable for 1 network.
+
+    Parameters:
+        :param env: (object) Environment, where the training takes place
+        :param task: (object) Task that is being trained, instance of a class TaskModule
+    """
+    def __init__(self, env, task):
+        super(SingleStagePnPnStay, self).__init__(env, task)
+        self.before_pick = True
+        self.stay_timesteps = 50
+        self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
+        self.placed_obj = False
+
+    def compute(self, observation):
+        """
+        Compute reward signal based on distance between 2 objects. The position of the objects must be present in observation.
+
+        Params:
+            :param observation: (list) Observation of the environment
+        Returns:
+            :return reward: (float) Reward signal for the environment
+        """
+        o1 = observation["actual_state"]
+        o2 = observation["goal_state"]
+        if self.gripper_reached_object(observation):
+            self.before_pick = False
+        reward = self.calc_dist_diff(o1, o2)
+        if self.task.calc_distance(o1, o2) < 0.1 and self.placed_obj==False:
+            self.env.robot.release_all_objects()
+            self.placed_obj = True
+            print("placed object ")
+        if(self.placed_obj and self.task.calc_distance(o1, o2) < 0.1 ):
+            print("staying on target for ", self.atGoal_timesteps , " timesteps ")
+            self.atGoal_timesteps += 1
+            reward *= 10. #give more reward for staying at the goal for extra incentive
+        if(self.atGoal_timesteps >= self.stay_timesteps):
+            print("stayed 50 timesteps on target, successsssss")
+            self.env.episode_over = True #not sure if this i needed explicitly since task.check_goal aready does this
+        self.task.check_goal(self.atGoal_timesteps, self.stay_timesteps)
+        self.rewards_history.append(reward)
+        return reward
+
+    def gripper_reached_object(self, observation):
+        gripper_name = [x for x in self.env.task.obs_template["additional_obs"] if "endeff" in x][0]
+        gripper = observation["additional_obs"][gripper_name][:3]
+        object = observation["actual_state"]
+        self.env.p.addUserDebugLine(gripper, object, lifeTime=0.1)
+        if self.before_pick:
+            self.env.robot.magnetize_object(self.env.env_objects["actual_state"])
+        if self.env.env_objects["actual_state"] in self.env.robot.magnetized_objects.keys():
+            self.env.p.changeVisualShape(self.env.env_objects["actual_state"].uid, -1, rgbaColor=[0, 255, 0, 1])
+            return True
+        return False
+
+    def reset(self):
+        """
+        Reset stored value of distance between 2 objects. Call this after the end of an episode.
+        """
+        self.prev_obj1_position = None
+        self.prev_obj2_position = None
+        self.before_pick = True
+        self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
+        self.placed_obj = False
+
+
 class SingleStagePnP(DistanceReward):
     """
     Pick and place with simple Distance reward. The gripper is operated automatically.
