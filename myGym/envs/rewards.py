@@ -2884,7 +2884,7 @@ class SingleStagePnPnStay(DistanceReward):
         if self.gripper_reached_object(observation):
             self.before_pick = False
         reward = self.calc_dist_diff(o1, o2)
-        if self.task.calc_distance(o1, o2) < 0.1 and self.placed_obj==False:
+        if self.task.calc_distance(o1, o2) < 0.1 and not self.placed_obj:
             self.env.robot.release_all_objects()
             self.placed_obj = True
             print("placed object ")

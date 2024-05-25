@@ -41,8 +41,8 @@ from myGym.stable_baselines_mygym.multi_acktr import MultiACKTR
 #from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
 #from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
 from myGym.stable_baselines_mygym.massPpo import MassPPOPolicy
-from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPolicy as CustomLSTMPolicy
-from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPPO as CustomPPO
+# from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPolicy as CustomLSTMPolicy
+# from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPPO as CustomPPO
 from myGym.stable_baselines_mygym.policies import MlpLstmPolicyCMO as RecurPoliCOM
 from myGym.stable_baselines_mygym.ppo_recurrent import RecurrentPPO as RecurPPOCOM
 
@@ -156,7 +156,7 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
                         }
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}

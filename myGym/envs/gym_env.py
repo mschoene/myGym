@@ -173,7 +173,7 @@ class GymEnv(CameraEnv):
         reward_classes = {
             "1-network": {"distance": DistanceReward, "complex_distance": ComplexDistanceReward, "sparse": SparseReward,
                           "distractor": VectorReward, "poke": PokeReachReward, "push": PushReward, "switch": SwitchReward,
-                          "btn": ButtonReward, "turn": TurnReward, "pnp": SingleStagePnP, "pnpnStay": SingleStagePnPnStay, "dice": DiceReward, "F": F},
+                          "btn": ButtonReward, "turn": TurnReward, "pnp": SingleStagePnP, "dice": DiceReward, "F": F},
             "2-network": {"poke": DualPoke, "pnp": TwoStagePnP, "pnpbgrip": TwoStagePnPBgrip, "push": TwoStagePushReward, "switch": SwitchRewardNew, "turn": TurnRewardNew, "FM": FaM},
             "3-network": {"pnp": ThreeStagePnP, "pnprot": ThreeStagePnPRot, "pnpswipe": ThreeStageSwipe, "FMR": FaMaR,"FROM": FaROaM,  "FMOR": FaMOaR, "FMOT": FaMOaT, "FROT": FaROaT,
                           "pnpswiperot": ThreeStageSwipeRot, "FMOM": FaMOaM},
@@ -420,8 +420,8 @@ class GymEnv(CameraEnv):
         # put current init and goal back in env_objects
         print(f"Shif next subtask index: {self.task.current_task}")
         print("Env object: ", self.env_objects["distractor"][0])
-        if self.env_objects["distractor"][0] == "past_object":
-            self.env_objects["distractor"][0] = self.env_objects["actual_state"]
+        if self.env_objects["actual_state"] == "past_object":
+            self.env_objects.prepend
         self.env_objects["distractor"].extend([self.env_objects["actual_state"], self.env_objects["goal_state"]])
         # set the next subtask objects as the actual and goal state and remove them from env_objects
         # if self.env_objects[]
@@ -533,10 +533,6 @@ class GymEnv(CameraEnv):
             return self.observation
         return self.observation["task_objects"]
 
-    def get_true_com(self):
-        com = self.task_objects['actual_state'].centroid
-        return np.array(com)
-    
     def step(self, action):
         """
         Environment step in simulation
