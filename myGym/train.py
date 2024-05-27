@@ -161,7 +161,8 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "ppoRecurrCOM":  {"pytorch": [RecurPPOCOM,   (RecurPoliCOM, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "ppoRecurrCOM":  {"pytorch": [RecurPPOCOM,   (RecurPoliCOM, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                          "ppoRecurrNoCOM":  {"pytorch": [RecurPPOCOM,   (RecurPoliCOM, env), {"verbose": 1, "com_coef": 0.0, "tensorboard_log": model_logdir}]}
                         }
     
 #            model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
