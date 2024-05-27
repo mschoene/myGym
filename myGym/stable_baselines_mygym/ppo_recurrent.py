@@ -299,7 +299,7 @@ class RecurrentPPO(OnPolicyAlgorithm):
 
         #true_com = self.env.envs[0].get_true_com()
         #print(true_com)
-
+        print("---------------- setting the loss coef for COM to = ", self.com_coef , "  ---------------")
         if _init_setup_model:
             self._setup_model()
 
