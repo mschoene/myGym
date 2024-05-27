@@ -11,7 +11,7 @@
     "num_episodes_hard_reset" : 40, #hard reset every x episode prevents objects from vanishing when GUI is on
     "autosafe_episode" : 100, #if episode % auto_safe_episode, write json files to directory (prevent data loss when process crashes)
     "random_arm_movement" : false, 
-    "active_cameras" : [0,0,0,0,1], #set 1 at a position(=camera number) to save images from this camera
+    "active_cameras" : [1,1,0,0,1], #set 1 at a position(=camera number) to save images from this camera
     "camera_resolution" : [640,480],
     "min_obj_area" : 49, #each object will have at least this pixels visible, to be reasonably recognizable. If not, skip. (49 ~ 7x7pix img)
     "train_test_split_pct" : 0.1, #data split, 0.0 = only train, 1.0 = only test 

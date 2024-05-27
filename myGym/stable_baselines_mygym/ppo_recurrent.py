@@ -239,16 +239,16 @@ class RecurrentPPO(OnPolicyAlgorithm):
         policy: Union[str, Type[RecurrentActorCriticPolicy]],
         env: Union[GymEnv, str],
         learning_rate: Union[float, Schedule] = 3e-4,
-        n_steps: int = 128,
+        n_steps: int = 128, # 1024, # 128,
         batch_size: Optional[int] = 128,
-        n_epochs: int = 10,
+        n_epochs: int = 4, #10,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
         clip_range: Union[float, Schedule] = 0.2,
         clip_range_vf: Union[None, float, Schedule] = None,
         normalize_advantage: bool = True,
         ent_coef: float = 0.0,
-        com_coef: float = 0.1, #TODO check if too large
+        com_coef: float = 0.1, #TODO check if too large. 1 seems too large
         vf_coef: float = 0.5,
         max_grad_norm: float = 0.5,
         use_sde: bool = False,
@@ -441,7 +441,7 @@ class RecurrentPPO(OnPolicyAlgorithm):
             
             #TODO check if we got more than 1 env
             com_truth = self.env.envs[0].get_true_com()
-            #true_com_tensor = th.from_numpy(true_com).float().to(com.device)  # Ensure the tensor is on the same device as pred_com
+            #print( "env ",self.env.envs[0], " with true com (moving if cube is moving)  "  , com_truth, "  and estim com ", com)
                 
             # Handle timeout by bootstraping with value function
             # see GitHub issue #633
@@ -618,7 +618,7 @@ class RecurrentPPO(OnPolicyAlgorithm):
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         self.logger.record("train/value_loss", np.mean(value_losses))
-        self.logger.record("train/coms_loss", np.mean(com_losses))
+        self.logger.record("train/com_loss", np.mean(com_losses))
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
@@ -635,7 +635,7 @@ class RecurrentPPO(OnPolicyAlgorithm):
         self: SelfRecurrentPPO,
         total_timesteps: int,
         callback: MaybeCallback = None,
-        log_interval: int = 1,
+        log_interval: int = 100,
         tb_log_name: str = "RecurrentPPO",
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,

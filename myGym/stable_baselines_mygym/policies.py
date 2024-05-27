@@ -91,9 +91,9 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
         lstm_hidden_size: int = 256,
         n_lstm_layers: int = 1,
-        shared_lstm: bool = False,
-        enable_critic_lstm: bool = True,
-        enable_com_lstm: bool = True,
+        shared_lstm: bool = True, #False,
+        enable_critic_lstm: bool = False, #True, share is caring
+        enable_com_lstm: bool = False, #True, sharing is caring
         lstm_kwargs: Optional[Dict[str, Any]] = None,
     ):
         self.lstm_output_dim = lstm_hidden_size
@@ -131,7 +131,9 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
         # (n_lstm_layers, batch_size, lstm_hidden_size)
         self.lstm_hidden_state_shape = (n_lstm_layers, 1, lstm_hidden_size)
         self.critic = None
-        self.lstm_critic = None
+        self.lstm_critic = None        
+        self.com = None
+        self.lstm_com = None
         assert not (
             self.shared_lstm and self.enable_critic_lstm
         ), "You must choose between shared LSTM, seperate or no LSTM for the critic."
@@ -163,12 +165,6 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
                 **self.lstm_kwargs,
             )
 
-        com_value_net_arch = self.net_arch["vf"]  # Extract value_net architecture from net_arch
-        com_mlp_layers = []
-        for i in range(len(com_value_net_arch) - 1):
-            com_mlp_layers.append(nn.Linear(com_value_net_arch[i], com_value_net_arch[i + 1]))
-            if i < len(com_value_net_arch) - 2:
-                com_mlp_layers.append(activation_fn())
 
         self.com_mlp_extractor = nn.Sequential(nn.Linear(in_features=256, out_features=64, bias=True),
             nn.Tanh(),
@@ -293,7 +289,9 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
         elif self.shared_lstm:
             # Re-use LSTM features but do not backpropagate
             latent_vf = latent_pi.detach()
+            latent_com = latent_pi.detach()
             lstm_states_vf = (lstm_states_pi[0].detach(), lstm_states_pi[1].detach())
+            lstm_states_com = (lstm_states_pi[0].detach(), lstm_states_pi[1].detach())
         else:
             # Critic only has a feedforward network
             latent_vf = self.critic(vf_features)
@@ -421,6 +419,7 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
             latent_vf, _ = self._process_sequence(vf_features, lstm_states.vf, episode_starts, self.lstm_critic)
         elif self.shared_lstm:
             latent_vf = latent_pi.detach()
+            latent_com = latent_pi.detach()
         else:
             latent_vf = self.critic(vf_features)
 
@@ -578,7 +577,7 @@ class RecurrentActorCriticCnnPolicy(RecurrentActorCriticPolicy):
         normalize_images: bool = True,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
-        lstm_hidden_size: int = 256,
+        lstm_hidden_size: int = 128, #256,
         n_lstm_layers: int = 1,
         shared_lstm: bool = False,
         enable_critic_lstm: bool = True,

@@ -33,6 +33,9 @@ except:
 
 from stable_baselines3.common.utils import set_random_seed
 
+from stable_baselines3.common.logger import configure
+
+
 from myGym.stable_baselines_mygym.algo import MyAlgo
 from myGym.stable_baselines_mygym.reference import REFER
 from myGym.stable_baselines_mygym.multi_ppo2 import MultiPPO2
@@ -157,8 +160,12 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
                           "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                          "ppoRecurrCOM":  {"pytorch": [RecurPPOCOM,   (RecurPoliCOM, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
                         }
+    
+#            model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
     #if "PPO_P" or "ppo_p" in sys.modules:
        # print("--------------------- got ppo P =====================")
@@ -181,9 +188,10 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
     with open(conf_pth, "w") as f:
         json.dump(arg_dict, f, indent=4)
 
-    #print("WWWWWWWWWWWWWWWWWWWWWW")
-    #print(env)
-    #print("WWWWWWWWWWWWWWWWWWWWWW")
+    #logger for loss etc
+    log_pth   = os.path.join(model_logdir, "sb3_log")
+    new_logger = configure(log_pth, ["stdout", "csv", "tensorboard"])
+
     model_args = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][1]
     model_kwargs = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][2]
     if seed is not None:
@@ -196,20 +204,22 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         env = model_args[1]
         #vec_env = DummyVecEnv([lambda: env])
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
-        #model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
-        model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+        
+        model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs).load(pretrained_model, env) #RecurPoliCOM
+        model.set_logger(new_logger)
         #model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
-        #model = CustomPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
-        #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+
+        # eg path for pretaining config "trained_models/pnp_franka_weighing_oneStep/pnp_table_panda_step_ppoRecurrCOM_20/best_model",
     else:
-        #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
+        model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
+        model.set_logger(new_logger)
+
         #model = CustomPPO(CustomLSTMPolicy, env,  **model_kwargs ) 
-        #assert isinstance(env, DummyVecEnv), f"Training env is not DummyVecEnv but {type(env)}"
-        model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+        #model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
         #model = RecurrentPPO("MlpLstmPolicy", env,  **model_kwargs )
         #model = PPO_P('MlpPolicy', env,  **model_kwargs )
         #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs )
-        print(model.policy)
+        #print(model.policy)
 
     #if arg_dict["algo"] == "gail":
     #    # Multi processing: (using MPI)
@@ -332,7 +342,7 @@ def get_arguments(parser):
     with open(args.config, "r") as f:
             arg_dict = commentjson.load(f)
     for key, value in vars(args).items():
-        if value is not None:
+        if value is not None and key is not "config":
             if key in ["robot_init"]:
                 arg_dict[key] = [float(arg_dict[key][i]) for i in range(len(arg_dict[key]))]
             elif key in ["task_objects"]:

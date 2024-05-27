@@ -2883,25 +2883,38 @@ class SingleStagePnPnStay(DistanceReward):
         o1 = obs_xyz["actual_state"]
         o2 = obs_xyz["goal_state"]
         #print(observation)
+        reward = 1. - 2.* self.task.calc_distance(o1, o2)
+
         if self.gripper_reached_object(obs_xyz):
+            if(self.before_pick==True and self.placed_obj==False):
+                print("picking up")
+            reward += 5. #plus 5 reward for every timestep the cube is touched
             self.before_pick = False
-        reward = self.calc_dist_diff(o1, o2)
+            #print("picked cube")
+        #reward = self.calc_dist_diff(o1, o2)
+        #print(reward)
+
+
         #print("reward  ", reward, "   obs state ", o1, "  obs goal ", o2)
         if self.task.calc_distance(o1, o2) < 0.1 and self.placed_obj==False:
             self.env.robot.release_all_objects()
             self.placed_obj = True
             print("placed object ")
-            if not self.env.robot.gripper_active: #not gripped is better, but not sure if this is sufficient incentive to let go, might need another network
+            if not self.env.robot.gripper_active: 
                 reward += 10
-                print("letting go of cube? ",self.env.robot.gripper_active )
+                #print("letting go of cube? gripper_active = ",self.env.robot.gripper_active )
+            self.env.robot.set_cooldown_counter()
 
         if(self.placed_obj and self.task.calc_distance(o1, o2) < 0.1 ):
             print("staying on target for ", self.atGoal_timesteps , " timesteps ")
             self.atGoal_timesteps += 1
-            reward += 10. #give more reward for staying at the goal for extra incentive
+            reward += 50. #give more reward for staying at the goal for extra incentive
+
         if(self.atGoal_timesteps >= self.stay_timesteps and self.placed_obj == True):
             print("stayed 50 timesteps on target, successsssss")
             self.env.episode_over = True #not sure if this i needed explicitly since task.check_goal aready does this
+
+        self.env.robot.update_cooldown_counter()
         self.task.check_goal(self.atGoal_timesteps, self.stay_timesteps)
         self.rewards_history.append(reward)
         return reward
@@ -2927,6 +2940,7 @@ class SingleStagePnPnStay(DistanceReward):
         self.before_pick = True
         self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
         self.placed_obj = False
+        self.env.robot.reset_cooldown()
 
     def repackage_observation(self, obs):
         # Extract the first three entries of actual_state and goal_state
@@ -3865,14 +3879,15 @@ class FourStagePnP(ThreeStagePnP):
         return self.current_network
 
 
-class FiveStagePnP(ThreeStagePnP):
-    '''Doing 5 reward steps: gripper above obj, griper picking up object, gripper moving object, gripper placing object and releasing, object staying in target place on it's own'''
+class FourStagePnPnStay(ThreeStagePnP):
+    '''Doing 4 reward steps: gripper above obj, griper picking up object, gripper moving object, gripper placing object and releasing, object staying in target place on it's own'''
 
     def reset(self):
-        super(ThreeStagePnP, self).reset()
+        super(FourStagePnPnStay, self).reset()
         self.was_above = False
-        self.stay_counter = 0 #counts staying time up to 
-        self.target_stay_time = 50 #max stay time on target
+        self.stay_timesteps = 50
+        self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
+        self.placed_obj = False
     
     def check_num_networks(self): 
         assert self.num_networks <= 5, "FiveStagePnP reward can work with maximum 5 networks"
@@ -3904,9 +3919,9 @@ class FiveStagePnP(ThreeStagePnP):
         reward = self.last_find_dist - dist
         self.last_find_dist = dist
         if self.task.check_object_moved(self.env.task_objects["actual_state"], threshold=1.2):
+            # this means the object was moved more than 1.2m, i.e. out of bounds
             self.env.episode_over   = True
             self.env.episode_failed = True
-            print("set to finished and failed in step 2?")
         self.network_rewards[1] += reward
         return reward
     
@@ -3936,51 +3951,32 @@ class FiveStagePnP(ThreeStagePnP):
         reward = self.last_place_dist - dist
         reward = reward * 10
         self.last_place_dist = dist
-        if self.last_owner == 3 and dist < 0.1:
+        if self.last_owner == 3 and dist < 0.1 and self.placed_obj==False:
             self.env.robot.release_all_objects()
+            self.placed_obj = True
             self.gripped = None
+            print("placed object ")
             self.env.episode_info = "Object was placed to desired position"
-            print("released the cube? robot position is   ",  self.env.robot.get_position()  , self.gripped )
+            if not self.env.robot.gripper_active: 
+                reward += 10
+                #print("letting go of cube... gripper_active = ",self.env.robot.gripper_active )
+            self.env.robot.set_cooldown_counter() #setting a cooldown counter such that object doesn't get picked up again right away
+        
+        if(self.placed_obj and dist < 0.1 ):
+            print("staying on target for ", self.atGoal_timesteps , " timesteps ")
+            self.atGoal_timesteps += 1
+            reward += 50. #give more reward for staying at the goal for extra incentive
+        
+        if(self.atGoal_timesteps >= self.stay_timesteps and self.placed_obj == True):
+            print("stayed 50 timesteps on target, successsssss")
+            self.env.episode_over = True #not sure if this i needed,  task.check_goal will check in any case
+
         if self.env.episode_steps <= 2:
             self.env.episode_info = "Task finished in initial configuration"
             print("step   ", self.env.episode_steps )
             #self.env.episode_over = True
+
         self.network_rewards[3] += reward
-        #print("task check goal " ,self.task.check_goal())
-
-        return reward
-
- 
-    def obj_staying_compute(self, object, goal):
-        self.env.p.addUserDebugText("place", [0.7,0.7,0.7], lifeTime=0.1, textColorRGB=[125,125,0])
-        self.env.p.addUserDebugLine(object, goal, lifeTime=0.1)
-        dist = self.task.calc_distance(object, goal)
-        
-        print( "step five  1     dist  ", dist,  "  last palce dist " ,  self.last_place_dist) #, "  gripped ", self.gripped  )
-        reward = self.last_place_dist - dist
-        reward = reward * 10
-        if not self.env.robot.gripper_active: #not gripped is better, but not sure if this is sufficient incentive to let go, might need another network
-            reward += 1
-
-        self.last_place_dist = dist
-        print( "step five  2   ", reward, "  dist  ", dist,  "  last palce dist " ,  self.last_place_dist )
-        #self.network_rewards[4] += reward
-        #print("task check goal " ,self.task.check_goal())
-        if dist < 0.1:
-            self.network_rewards[4] += reward
-            self.env.episode_info = "Object stayed on target for 50 timesteps"
-            print("Object stayed on target for 50 timesteps, ending episode successfully")
-
-        #else:
-        #    self.stay_counter +=1
-
-        self.stay_counter +=1
-        if self.stay_counter >= self.target_stay_time:
-            self.env.episode_info = "Object stayed on target for 50 timesteps"
-            self.env.episode_over = True
-            print("Object stayed on target for 50 timesteps, ending episode successfully")
-
-
         return reward
 
     def compute(self, observation=None):
@@ -3992,16 +3988,34 @@ class FiveStagePnP(ThreeStagePnP):
         Returns:
             :return reward: (float) Reward signal for the environment
         """
+        observation = self.repackage_observation(observation) #we're working with 6d info for com
         owner = self.decide(observation)
+
         goal_position, object_position, gripper_position = self.get_positions(observation)
-        target = [[gripper_position,object_position],[gripper_position,object_position], [object_position, goal_position], [object_position, goal_position], [object_position, goal_position]][owner]
-        reward = [self.above_compute,self.find_compute,self.move_compute, self.place_compute, self.obj_staying_compute][owner](*target)
+        target = [[gripper_position,object_position],[gripper_position,object_position], [object_position, goal_position], [object_position, goal_position]][owner]
+        reward = [self.above_compute,self.find_compute,self.move_compute, self.place_compute][owner](*target)
         self.last_owner = owner
-        self.task.check_goal()
+        #self.task.check_goal()
+        self.env.robot.update_cooldown_counter()
+        self.task.check_goal(self.atGoal_timesteps, self.stay_timesteps)
+
         #print("task check goal " ,self.task.check_goal())
         self.rewards_history.append(reward)
         return reward
-
+    
+    def repackage_observation(self, obs):
+        # Extract the first three entries of actual_state and goal_state
+        actual_state_xyz = obs['actual_state'][:3]
+        goal_state_xyz = obs['goal_state'][:3]
+    
+        # Create a new dictionary with the required entries
+        observation_xyz = {
+            'actual_state': actual_state_xyz,
+            'goal_state': goal_state_xyz,
+            'additional_obs': obs['additional_obs']
+        }
+        return observation_xyz
+    
     def decide(self, observation=None):
         goal_position, object_position, gripper_position = self.get_positions(observation)
         if self.object_above_goal(gripper_position, object_position) or self.was_above:
@@ -4011,8 +4025,6 @@ class FiveStagePnP(ThreeStagePnP):
         if self.object_above_goal(object_position, goal_position) or self.was_above:
             self.current_network = 3
             self.was_above = True
-        if self.task.calc_distance(object_position, goal_position) <0.001 and self.current_network==3 :
-            self.current_network = 4
         return self.current_network
     
 

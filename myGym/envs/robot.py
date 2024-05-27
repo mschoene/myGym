@@ -79,6 +79,8 @@ class Robot:
         #else:
         #self.init_joint_poses = np.zeros((len(self.motor_names)))
         #self.reset()
+        self.cooldown_period = 100  # Number of steps to wait before magnetizing again
+        self.cooldown_counter = 0
 
     def _load_robot(self):
         """
@@ -605,10 +607,20 @@ class Robot:
         #if 'gripper' not in self.robot_action:
         #    for joint_index in range(self.gripper_index, self.end_effector_index + 1):
         #        self.p.resetJointState(self.robot_uid, joint_index, self.p.getJointInfo(self.robot_uid, joint_index)[9])
+    
+    def update_cooldown_counter(self):
+        if self.cooldown_counter>0:
+            self.cooldown_counter -= 1
+
+    def set_cooldown_counter(self):
+        self.cooldown_counter = self.cooldown_period
+
+    def reset_cooldown(self):
+        self.cooldown_counter = 0
 
     def magnetize_object(self, object, distance_threshold=.1):
-        if len(self.magnetized_objects) == 0 :
-            
+        if len(self.magnetized_objects) == 0 and self.cooldown_counter ==0 :
+
             if np.linalg.norm(np.asarray(self.get_position()) - np.asarray(object.get_position()[:3])) <= distance_threshold:
                 self.p.changeVisualShape(object.uid, -1, rgbaColor=[.8, .1 , 0.1, 0.5])
                 #self.end_effector_prev_pos = self.end_effector_pos

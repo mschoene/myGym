@@ -177,8 +177,7 @@ class GymEnv(CameraEnv):
             "2-network": {"poke": DualPoke, "pnp": TwoStagePnP, "pnpbgrip": TwoStagePnPBgrip, "push": TwoStagePushReward, "switch": SwitchRewardNew, "turn": TurnRewardNew, "FM": FaM},
             "3-network": {"pnp": ThreeStagePnP, "pnprot": ThreeStagePnPRot, "pnpswipe": ThreeStageSwipe, "FMR": FaMaR,"FROM": FaROaM,  "FMOR": FaMOaR, "FMOT": FaMOaT, "FROT": FaROaT,
                           "pnpswiperot": ThreeStageSwipeRot, "FMOM": FaMOaM},
-            "4-network": {"pnp": FourStagePnP,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR},
-            "5-network": {"pnpNstay": FiveStagePnP}}
+            "4-network": {"pnp": FourStagePnP,"pnpnStay": FourStagePnPnStay,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR}}
     
         scheme = "{}-network".format(str(self.num_networks))
         assert self.reward in reward_classes[scheme].keys(), "Failed to find the right reward class. Check reward_classes in gym_env.py"
