@@ -40,7 +40,7 @@ from myGym.stable_baselines_mygym.multi_acktr import MultiACKTR
 #from myGym.stable_baselines_mygym.policies import MyMlpPolicy
 #from myGym.stable_baselines_mygym.TorchPPO import TorchPPO
 #from myGym.stable_baselines_mygym.TorchPPOpolicies import TorchMlpPolicy
-from myGym.stable_baselines_mygym.massPpo import MassPPOPolicy
+from myGym.stable_baselines_mygym.massPpo import MassDistributionNN
 # from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPolicy as CustomLSTMPolicy
 # from myGym.stable_baselines_mygym.comPPO import CustomRecurrentPPO as CustomPPO
 from myGym.stable_baselines_mygym.policies import MlpLstmPolicyCMO as RecurPoliCOM
@@ -101,6 +101,7 @@ def save_results(arg_dict, model_name, env, model_logdir=None, show=False):
     #    plt.show()
 
 def configure_env(arg_dict, model_logdir=None, for_train=True):
+    print("OBSERVATION", arg_dict["observation"])
     env_arguments = {"render_on": True, "visualize": arg_dict["visualize"], "workspace": arg_dict["workspace"],
                      "robot": arg_dict["robot"], "robot_init_joint_poses": arg_dict["robot_init"],
                      "robot_action": arg_dict["robot_action"],"max_velocity": arg_dict["max_velocity"], 
@@ -155,9 +156,9 @@ def configure_implemented_combos(env, model_logdir, arg_dict):
                           "multippo2":  {"tensorflow": [MultiPPO2,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "multiacktr":  {"tensorflow": [MultiACKTR,   (MlpPolicy, env),    {"n_steps": arg_dict["algo_steps"],"n_models": arg_dict["num_networks"], "verbose": 1, "tensorboard_log": model_logdir}]},
                           "ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "massPpo":  {"pytorch": [MassPPOPolicy,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
-                          "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                          "massPpo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
+                        #   "massPpoMS":  {"pytorch": [CustomPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]},
+                        #   "ppoRecurr":  {"pytorch": [RecurrentPPO,   (CustomLSTMPolicy, env), {"verbose": 1, "tensorboard_log": model_logdir}]}
                         }
                           #"ppo":  {"pytorch": [PPO_P,   (MlpPolicy, env), {"_init_setup_model": False, "verbose": 1, "tensorboard_log": model_logdir}]}}
     #if "PPO_P" or "ppo_p" in sys.modules:
@@ -196,17 +197,17 @@ def train(env, implemented_combos, model_logdir, arg_dict, pretrained_model=None
         env = model_args[1]
         #vec_env = DummyVecEnv([lambda: env])
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0].load(pretrained_model, vec_env)
-        #model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
-        model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        model = PPO_P('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
+        # model = RecurrentPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
         #model = CustomPPO('CustomLSTMPolicy', env,  **model_kwargs ).load(pretrained_model, env)
         #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs ).load(pretrained_model, env)
     else:
         #model = implemented_combos[arg_dict["algo"]][arg_dict["train_framework"]][0](*model_args, **model_kwargs)
         #model = CustomPPO(CustomLSTMPolicy, env,  **model_kwargs ) 
         #assert isinstance(env, DummyVecEnv), f"Training env is not DummyVecEnv but {type(env)}"
-        model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
+        # model = RecurPPOCOM(RecurPoliCOM, env,  **model_kwargs ) #RecurPoliCOM
         #model = RecurrentPPO("MlpLstmPolicy", env,  **model_kwargs )
-        #model = PPO_P('MlpPolicy', env,  **model_kwargs )
+        model = PPO_P('MlpPolicy', env,  **model_kwargs )
         #model = MassPPOPolicy('MlpPolicy', env,  **model_kwargs )
 
 

@@ -46,6 +46,7 @@ class TaskModule():
         self.vision_src = self.vision_module.src
         self.obsdim = self.check_obs_template()
         self.writebool = False
+        self.goal_i = 0
 
     def reset_task(self):
         """
@@ -101,8 +102,15 @@ class TaskModule():
             elif key == "endeff_xyz":
                 info["additional_obs"]["endeff_xyz"] = self.vision_module.get_obj_position(robot, self.image, self.depth)[:3]
             elif key == "endeff_6D":
-                info["additional_obs"]["endeff_6D"] = list(self.vision_module.get_obj_position(robot, self.image, self.depth)) \
+                info["additional_obs"]["endeff_6D"] = list(self.vision_module.get_obj_position(robot, self.image, self.depth))[:3] \
                                                       + list(self.vision_module.get_obj_orientation(robot))
+            elif key == "cube_fall_flag":
+                if hasattr(self.env.env_objects["actual_state"], "magnetized_objects"):
+                    obj_touch = self.env.env_objects["goal_state"]
+                else:
+                    obj_touch = self.env.env_objects["actual_state"]
+                info["additional_obs"]["cube_fall_flag"] = [self.current_task == 1 and (len(self.env.robot.magnetized_objects) == 0 and info["actual_state"] != self._observation["actual_state"])]
+
             elif key == "touch":
                 if hasattr(self.env.env_objects["actual_state"], "magnetized_objects"):
                     obj_touch = self.env.env_objects["goal_state"]
@@ -212,7 +220,18 @@ class TaskModule():
         """
         self.current_norm_distance = self.calc_distance(observation["goal_state"], observation["actual_state"])
 
-        return (self.current_norm_distance < threshold and time_steps>= time_step_threshold )
+        
+
+        if self.goal_i < 1:
+            output = self.current_norm_distance < threshold
+            if output:
+                self.goal_i += 1
+            return output
+        else:
+            output = time_steps >= time_step_threshold
+            if output:
+                self.goal_i = 0
+            return output
     
     def check_distrot_threshold(self, observation, threshold=0.1):
         """
@@ -323,10 +342,10 @@ class TaskModule():
         """
         Check if goal of the task was completed successfully
         """
-        
+
         finished = None
         if self.task_type in ['pnp']: #all tasks ending with R (FMR) have to have distrot checker
-            finished = self.check_distance_threshold_and_time(self._observation,  time_steps=0, time_step_threshold =50)  
+            finished = self.check_distance_threshold_and_time(self._observation,  time_steps=time_steps, time_step_threshold =time_step_threshold)  
         if self.task_type in ['reach', 'poke', 'pnpbgrip', 'FMOT', 'FROM', 'FROT', 'FMOM', 'FM','F']: #all tasks ending with R (FMR) have to have distrot checker
             finished = self.check_distance_threshold(self._observation)  
         if self.task_type in ['pnprot','pnpswipe','FMR', 'FMOR', 'FMLFR', 'compositional']:
@@ -377,7 +396,7 @@ class TaskModule():
         self.env.robot.release_all_objects()
 
     def end_episode_success(self):
-        #print("Finished subtask {}".format(self.current_task))
+        print("Finished subtask {}".format(self.current_task))
         if self.current_task == (self.number_tasks-1):
             self.env.episode_over = True
             self.env.robot.release_all_objects()
@@ -599,9 +618,9 @@ class TaskModule():
                            "joints_angles":len(self.env.robot.get_joints_states()),
                            "endeff_xyz":3,
                            "endeff_6D":7,
-                           "dope":7, "obj_6D":7, "distractor": 3, "touch":1, "yolact":3, "voxel":3, "obj_xyz":3,
+                           "dope":7, "obj_6D":7, "distractor": 3, "touch":1, "yolact":3, "voxel":3, "obj_xyz":3, "cube_fall_flag":1,
                            "vae":self.vision_module.obsdim}
             obsdim += get_datalen[x]
         for x in t["additional_obs"]:
             obsdim += get_datalen[x]
-        return obsdim
+        return obsdim + 3

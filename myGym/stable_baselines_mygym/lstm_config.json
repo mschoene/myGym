@@ -1,0 +1,9 @@
+{
+    "input_dim": 7,
+    "hidden_dim": 64,
+    "output_dim": 3,
+    "num_layers": 2,
+    "sequence_length": 5,
+    "num_epochs": 60,
+    "use_model": false
+}

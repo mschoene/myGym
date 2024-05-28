@@ -66,6 +66,8 @@ class Robot:
         self.robot_action = robot_action
         self.task_type = task_type
         self.magnetized_objects = {}
+        self.can_magnetize = True
+        self.able_to_regrasp = 0
         self.gripper_active = False
         self._load_robot()
         self.num_joints = self.p.getNumJoints(self.robot_uid)
@@ -568,6 +570,7 @@ class Robot:
         Parameters:
             :param action: (list) Desired action data
         """
+        self.able_to_regrasp = max(0, self.able_to_regrasp-1)
         if "step" in self.robot_action:
             self.apply_action_step(action)
         elif "absolute" in self.robot_action:
@@ -582,8 +585,9 @@ class Robot:
             if "pnp" in self.task_type: 
             #"Need to provide env_objects to use gripper"
             #When gripper is not in robot action it will magnetize objects
-                self.gripper_active = True
-                self.magnetize_object(env_objects["actual_state"])
+                # self.gripper_active = True
+                self.magnetize_object(env_objects["actual_state"]) 
+                # self.release_all_objects()
             elif self.task_type in ["compositional", "fmot"]:
                 if self.use_magnet and env_objects["actual_state"] != self:
                     self.gripper_active = True
@@ -607,8 +611,7 @@ class Robot:
         #        self.p.resetJointState(self.robot_uid, joint_index, self.p.getJointInfo(self.robot_uid, joint_index)[9])
 
     def magnetize_object(self, object, distance_threshold=.1):
-        if len(self.magnetized_objects) == 0 :
-            
+        if len(self.magnetized_objects) == 0 and self.able_to_regrasp <= 0 and self.can_magnetize:
             if np.linalg.norm(np.asarray(self.get_position()) - np.asarray(object.get_position()[:3])) <= distance_threshold:
                 self.p.changeVisualShape(object.uid, -1, rgbaColor=[.8, .1 , 0.1, 0.5])
                 #self.end_effector_prev_pos = self.end_effector_pos
@@ -616,6 +619,7 @@ class Robot:
                 self.p.resetBasePositionAndOrientation(object.uid,self.get_position(),self.get_orientation())
                 constraint_id = self.p.createConstraint(object.uid, -1, -1, -1, self.p.JOINT_FIXED, [0, 0, 0], [0, 0, 0],
                                       self.get_position())
+                
                 #self.p.resetBasePositionAndOrientation(object.uid,self.get_position(),self.get_orientation())
                 self.magnetized_objects[object] = constraint_id
                 self.gripper_active = True
@@ -623,6 +627,8 @@ class Robot:
     def release_object(self, object):
         if object in self.magnetized_objects.keys():
             self.p.removeConstraint(self.magnetized_objects[object])
+            # self.p.applyExternalForce(object.uid, 0, forceObj=[0, 0, 0], posObj=[0, 0, 0], flags=self.WORLD_FRAME)
+            # self.p.applyExternalTorque(object.uid, 0, torqueObj=[0, 0, 0], flags=self.p.WORLD_FRAME)
             #self.p.resetBasePositionAndOrientation(object.uid,self.get_position(),self.get_orientation())
             self.magnetized_objects.pop(object)
         self.gripper_active = False
@@ -630,10 +636,12 @@ class Robot:
     def release_all_objects(self):
         for x in self.magnetized_objects:
             self.p.removeConstraint(self.magnetized_objects[x])
+            # self.p.resetBaseVelocity(x.uid, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
             #self.p.resetBasePositionAndOrientation(object.uid,self.get_position(),self.get_orientation())
             #self.p.changeVisualShape(object.uid, -1, rgbaColor=[255, 0, 0, 1])
         self.magnetized_objects = {}
         self.gripper_active = False
+        self.able_to_regrasp = 50
 
     def set_magnetization(self, value):
         self.use_magnet = value

@@ -1,5 +1,11 @@
 import copy
 from typing import List
+import csv
+import json
+
+import pandas as pd
+import torch
+from torch.nn.utils.rnn import pad_sequence
 
 from myGym.envs import robot, env_object
 from myGym.envs import task as t
@@ -15,6 +21,7 @@ from gym import spaces
 from scipy.spatial.transform import Rotation
 import random
 
+from myGym.stable_baselines_mygym.massPpo import MassDistributionNN
 from myGym.utils.helpers import get_workspace_dict
 import pkg_resources
 from myGym.envs.human import Human
@@ -114,6 +121,11 @@ class GymEnv(CameraEnv):
         self.task_objects_dict     = task_objects
         self.task_objects = []
         self.env_objects = []
+        self.cube_fall = []
+        self.com = [0,0,0]
+        self.step_i = 0
+        self.can_use_mass_dist = False
+        self.lsltm = None
         self.vae_path = vae_path
         self.yolact_path = yolact_path
         self.yolact_config = yolact_config
@@ -163,6 +175,9 @@ class GymEnv(CameraEnv):
         self.n_subtasks = len(self.task_objects_dict) if self.task_objects_were_given_as_list else 1
         if self.reach_gesture and not self.nl_mode:
             raise Exception("Reach gesture task can't be started without natural language mode")
+        config_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "../stable_baselines_mygym/lstm_config.json")
+        with open(config_path, 'r') as config_file:
+            self.lstm_config = json.load(config_file)
 
         super(GymEnv, self).__init__(active_cameras=active_cameras, **kwargs)
 
@@ -172,15 +187,16 @@ class GymEnv(CameraEnv):
             self.distractor = ['bus'] if not self.distractors["list"] else self.distractors["list"]
         reward_classes = {
             "1-network": {"distance": DistanceReward, "complex_distance": ComplexDistanceReward, "sparse": SparseReward,
-                          "distractor": VectorReward, "poke": PokeReachReward, "push": PushReward, "switch": SwitchReward,
+                          "distractor": VectorReward, "poke": PokeReachReward, "push": PushReward, "switch": SwitchReward, "pnpnStay": SingleStagePnPnStay,
                           "btn": ButtonReward, "turn": TurnReward, "pnp": SingleStagePnP, "dice": DiceReward, "F": F},
             "2-network": {"poke": DualPoke, "pnp": TwoStagePnP, "pnpbgrip": TwoStagePnPBgrip, "push": TwoStagePushReward, "switch": SwitchRewardNew, "turn": TurnRewardNew, "FM": FaM},
             "3-network": {"pnp": ThreeStagePnP, "pnprot": ThreeStagePnPRot, "pnpswipe": ThreeStageSwipe, "FMR": FaMaR,"FROM": FaROaM,  "FMOR": FaMOaR, "FMOT": FaMOaT, "FROT": FaROaT,
                           "pnpswiperot": ThreeStageSwipeRot, "FMOM": FaMOaM},
-            "4-network": {"pnp": FourStagePnP,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR},
-            "5-network": {"pnpNstay": FiveStagePnP}}
+            "4-network": {"pnp": FourStagePnP,"pnpMass": FourStagePnPmassDistr, "pnprot": FourStagePnPRot, "FMLFR": FaMaLaFaR, "pnpNstay": FiveStagePnP}
+            }
     
         scheme = "{}-network".format(str(self.num_networks))
+        print(self.reward, scheme)
         assert self.reward in reward_classes[scheme].keys(), "Failed to find the right reward class. Check reward_classes in gym_env.py"
         self.task = t.TaskModule(task_type=self.task_type,
                                  observation=self.obs_type,
@@ -192,6 +208,8 @@ class GymEnv(CameraEnv):
                                  env=self)
         print( "Number of subtasks ", self.n_subtasks)
         self.reward = reward_classes[scheme][self.reward](env=self, task=self.task)
+        if isinstance(self.reward, FiveStagePnP):
+            self.lstm = MassDistributionNN(self.lstm_config["input_dim"], self.lstm_config["output_dim"], self.lstm_config["hidden_dim"])
 
     def _setup_scene(self):
         """
@@ -310,9 +328,24 @@ class GymEnv(CameraEnv):
             :return self._observation: (list) Observation data of the environment
         """
         if not only_subtask:
+            if len(self.cube_fall) > 1:
+                cube_fall_diff = self.vel_com()
+                cube_fall_diff.append(self.com_cube)
+
+                with open("dataset_com_lstm.csv", 'a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(cube_fall_diff)
+                self.cube_fall = []
             self.robot.reset(random_robot=random_robot)
             super().reset(hard=hard)
-
+            self.reward.stay_counter = 0
+            self.task.goal_i = 0
+            self.step_i = 0
+            self.task.current_task = 0
+            self.can_use_mass_dist = False
+            self.com = [0,0,0]
+            
+            self.robot.can_magnetize = True
             if not self.nl_mode:
                 other_objects = []
                 if self.task_objects_were_given_as_list:
@@ -329,14 +362,18 @@ class GymEnv(CameraEnv):
                         task_objects_dict = [{"init": {"obj_name":"null"}, "goal": goal}]
                         other_objects = self._randomly_place_objects({"obj_list": [o for o in self.task_objects_dict["goal"] if o != goal]})
 
+                self.task_objects = self._randomly_place_objects(task_objects_dict[self.task.current_task])
+                self.task_objects = dict(ChainMap(*self.task_objects))
+                
                 all_subtask_objects = [x for i, x in enumerate(task_objects_dict) if i != self.task.current_task]
                 subtasks_processed = [list(x.values()) for x in all_subtask_objects]
+
                 subtask_objects = self._randomly_place_objects({"obj_list": list(chain.from_iterable(subtasks_processed))})
+
                 self.env_objects = {"env_objects": self._randomly_place_objects(self.used_objects)}
                 if self.task_objects_were_given_as_list:
                     self.env_objects["env_objects"] += other_objects
-                self.task_objects = self._randomly_place_objects(task_objects_dict[self.task.current_task])
-                self.task_objects = dict(ChainMap(*self.task_objects))
+
                 if subtask_objects:
                     self.task_objects["distractor"] = subtask_objects
             else:
@@ -385,7 +422,6 @@ class GymEnv(CameraEnv):
                 self.task_objects = {"actual_state": init if init is not None else self.robot, "goal_state": goal}
                 other_objects = [o for o in init_objects + goal_objects if o != init and o != goal]
                 self.env_objects = {"env_objects": other_objects + self._randomly_place_objects(self.used_objects)}
-
                 # will set the task and the reward
                 self._set_observation_space()
         if only_subtask:
@@ -405,7 +441,9 @@ class GymEnv(CameraEnv):
         self.task.reset_task()
         self.reward.reset()
         self.p.stepSimulation()
-        self._observation = self.get_observation()
+        obs = self.get_observation()
+
+        self._observation = obs
 
         if self.gui_on and self.nl_mode:
             if self.reach_gesture:
@@ -414,14 +452,11 @@ class GymEnv(CameraEnv):
             if only_subtask and self.nl_text_id is not None:
                 self.p.removeUserDebugItem(self.nl_text_id)
 
-        return self.flatten_obs(self._observation.copy())
+        # self.add_com_to_obs()
+        return np.append(self.flatten_obs(self._observation.copy()), self.com)
 
     def shift_next_subtask(self):
         # put current init and goal back in env_objects
-        print(f"Shif next subtask index: {self.task.current_task}")
-        print("Env object: ", self.env_objects["distractor"][0])
-        if self.env_objects["actual_state"] == "past_object":
-            self.env_objects.prepend
         self.env_objects["distractor"].extend([self.env_objects["actual_state"], self.env_objects["goal_state"]])
         # set the next subtask objects as the actual and goal state and remove them from env_objects
         # if self.env_objects[]
@@ -545,6 +580,8 @@ class GymEnv(CameraEnv):
             :return done: (bool) Whether this stop is episode's final
             :return info: (dict) Additional information about step
         """
+        self.step_i += 1
+
         self._apply_action_robot(action)
         if self.has_distractor: [self.dist.execute_distractor_step(d) for d in self.distractors["list"]]
         self._observation = self.get_observation()
@@ -561,7 +598,55 @@ class GymEnv(CameraEnv):
         if self.task.subtask_over:
             self.reset(only_subtask=True)
         # return self._observation, reward, done, info
-        return self.flatten_obs(self._observation.copy()), reward, done, info
+        if self.task.current_task == 0 and len(self.robot.magnetized_objects) == 0 and self.step_i < 150 and self.step_i > 80:
+            if len(self.cube_fall) > 0:
+                if np.linalg.norm((np.array(self._observation["actual_state"]), np.array(self.cube_fall[-1])), ord=1) > 0.0001:
+                    self.cube_fall.append(self._observation["actual_state"])
+            else:
+                self.cube_fall.append(self._observation["actual_state"])
+        elif len(self.cube_fall) > 0 and not self.can_use_mass_dist and self.lstm and self.lstm_config["use_model"]:
+            s_length = self.lstm_config["sequence_length"]
+            cube_fall_diff = self.vel_com()
+
+            start_idx = 0
+            end_idx = s_length
+
+            if len(cube_fall_diff) >= s_length:
+                sequences = []
+                while end_idx <= len(cube_fall_diff):
+                    sequences.append(cube_fall_diff[start_idx:end_idx])
+                    start_idx += 1
+                    end_idx = start_idx + s_length
+                sequences = torch.tensor(sequences, dtype=torch.float32)
+            else:
+                sequences = torch.tensor([cube_fall_diff], dtype=torch.float32)
+
+            with torch.no_grad(): 
+                self.com = self.lstm(sequences).detach()
+                self.com = self.com.squeeze(0)
+                self.com = self.com.tolist()
+            self.can_use_mass_dist = True
+    
+        # self.add_com_to_obs()    
+        return np.append(self.flatten_obs(self._observation.copy()), self.com), reward, done, info
+
+    def vel_com(self):
+        def diff(c, p):
+            return [i - j for i,j in zip(c,p)]
+        
+        cf = self.cube_fall
+        cube_fall_diff = [diff(current, previous) for current, previous in zip(cf[:-1], cf[1:])]
+        cube_fall_diff[0] = [0, 0, 0, 0, 0, 0, 0]
+        return [cube_fall_diff]
+
+    def add_com_to_obs(self):
+        if self.can_use_mass_dist:
+            if len(self._observation["actual_state"]) <= 7:
+                self._observation["actual_state"] = [*self._observation["actual_state"], *self.com]
+        else:
+            if len(self._observation["actual_state"]) <= 7:
+                self._observation["actual_state"] = [*self._observation["actual_state"], 0, 0, 0]                
+                
 
     def compute_reward(self, achieved_goal, desired_goal, info):
         # @TODO: Reward computation for HER, argument for .compute()
@@ -635,7 +720,9 @@ class GymEnv(CameraEnv):
         pos = env_object.EnvObject.get_random_object_position(obj_info["sampling_area"])
         orn = env_object.EnvObject.get_random_z_rotation() if obj_info["rand_rot"] == 1 else [0, 0, 0, 1]
         #random center of mass
-        com = env_object.EnvObject.get_random_object_com(obj_info["rand_com"]) if "rand_com" in obj_info else [0, 0, 0]
+        com = env_object.EnvObject.get_random_object_com(obj_info["rand_com"]) if "rand_com" in obj_info else [0,0,0]
+        if "rand_com" in obj_info:
+            self.com_cube = com
         object = env_object.EnvObject(obj_info["urdf"], pos, orn, pybullet_client=self.p, fixed=fixed, com_pos = com)
         # if self.color_dict: object.set_color(self.color_of_object(object))
         return object
@@ -654,7 +741,7 @@ class GymEnv(CameraEnv):
         env_objects = []
         if not "init" in object_dict.keys():  # solves used_objects
             for idx, o in enumerate(object_dict["obj_list"]):
-                  if o["obj_name"] != "null" and o["obj_name"] != "reuse_past_object":
+                  if o["obj_name"] != "null" and "reuse" not in o["obj_name"]:
                       urdf = self._get_urdf_filename(o["obj_name"])
                       if urdf:
                         object_dict["obj_list"][idx]["urdf"] = urdf
@@ -666,15 +753,17 @@ class GymEnv(CameraEnv):
                     self.highlight_active_object(env_o, "other")
                     env_objects.append(env_o)
             else:
-                for o in object_dict["obj_list"]:
-                    if o["obj_name"] != "null" and o["obj_name"] != "reuse_past_object":
+                for i, o in enumerate(object_dict["obj_list"]):
+                    if o["obj_name"] != "null" and "reuse" not in o["obj_name"]:
                         env_o = self._place_object(o)
                         self.highlight_active_object(env_o, "other")
                         env_objects.append(env_o)
+                    elif "reuse" in o["obj_name"]:
+                        env_objects.append(self.task_objects['actual_state'])
         else:  # solves task_objects
             for o in ['init', 'goal']:
                 d = object_dict[o]
-                if d["obj_name"] != "null" and d["obj_name"] != "reuse_past_object":
+                if d["obj_name"] != "null" and "reuse" not in d["obj_name"]:
                     d["urdf"] = self._get_urdf_filename(d["obj_name"])
                     n = "actual_state" if o == "init" else "goal_state"
                     env_o = self._place_object(d)
@@ -683,8 +772,9 @@ class GymEnv(CameraEnv):
                     env_objects.append({n: env_o})
                 elif d["obj_name"] == "null" and o == "init":
                     env_objects.append({"actual_state": self.robot})
-                elif d["obj_name"] == "reuse_past_object" and o == "init":
-                    env_objects.append({"actual_state": "past_object"})
+                elif "reuse" in d["obj_name"]:
+                    n = "actual_state" if o == "init" else "goal_state"
+                    env_objects.append({n: self.task_objects[n]})
         return env_objects
 
     def highlight_active_object(self, env_o, obj_role):

@@ -129,8 +129,8 @@ class CustomEvalCallback(EvalCallback):
                     [.8, .5, 0.2], textSize=1.0, lifeTime=0.5, textColorRGB=[1, 0, 0])
                 #p.addUserDebugText(f"Endeff:{matrix(np.around(np.array(info['o']['additional_obs']['endeff_xyz']),5))}",
                 #    [.8, .5, 0.1], textSize=1.0, lifeTime=0.5, textColorRGB=[0.0, 1, 0.0])
-                p.addUserDebugText(f"Object:{matrix(np.around(np.array(info['o']['actual_state']),5))}",
-                    [.8, .5, 0.15], textSize=1.0, lifeTime=0.5, textColorRGB=[0.0, 0.0, 1])
+                # p.addUserDebugText(f"Object:{matrix(np.around(np.array(info['o']['actual_state']),5))}",
+                #     [.8, .5, 0.15], textSize=1.0, lifeTime=0.5, textColorRGB=[0.0, 0.0, 1])
                 p.addUserDebugText(f"Network:{self.eval_env.env.reward.current_network}",
                     [.8, .5, 0.25], textSize=1.0, lifeTime=0.5, textColorRGB=[0.0, 0.0, 1])
                 p.addUserDebugText(f"Subtask:{self.eval_env.env.task.current_task}",

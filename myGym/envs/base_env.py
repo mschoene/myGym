@@ -179,6 +179,7 @@ class BaseEnv(gym.Env):
         self._connect_to_physics_server()
         self.scene_objects_uids = {}
         #self.episode_number = 0
+        self.env_objects = {}
         self._set_physics()
         self._setup_scene()
 
@@ -327,14 +328,19 @@ class BaseEnv(gym.Env):
         Remove all objects from simulation (not scene objects or robots)
         """
         env_objects_copy = self.env_objects.copy()
-        for key, o in env_objects_copy.items():
-            if isinstance(o, list):
-                for i in o:
-                  if o not in [self.robot, []]:
-                    self._remove_object(i)
-            else:
-              if o != self.robot:
-                self._remove_object(o)
+
+        def flatten(lst):
+            for item in lst:
+                if isinstance(item, list):
+                    yield from flatten(item)  # Recursively yield elements from nested lists
+                else:
+                    if item != self.robot:
+                        yield item
+
+        env_object_set = set(flatten(env_objects_copy.values()))
+
+        for o in env_object_set:
+            self._remove_object(o)
 
     def get_texturizable_objects_uids(self):
         """

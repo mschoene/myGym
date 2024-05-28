@@ -62,6 +62,14 @@ class EnvObject:
         self.debug_line_ids = []
         self.cuboid_dimensions = None
 
+    def __eq__(self, other):
+        if isinstance(other, EnvObject):
+            return self.name == other.name and self.uid == other.uid
+        return False
+    
+    def __hash__(self):
+        return hash((self.name, self.uid))
+
     def __repr__(self):
         return self.name
 

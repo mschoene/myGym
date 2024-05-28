@@ -4,6 +4,7 @@ import numpy as np
 import torch as th
 from gym import spaces
 from torch.nn import functional as F
+from stable_baselines_mygym.TorchPPO import TorchPPO
 
 from stable_baselines3.common import logger
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
@@ -11,55 +12,9 @@ from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
-# class RolloutBufferClassLSTM()
 
-class TorchPPO(OnPolicyAlgorithm):
-    """
-    Proximal Policy Optimization algorithm (PPO) (clip version)
-    Paper: https://arxiv.org/abs/1707.06347
-    Code: This implementation borrows code from OpenAI Spinning Up (https://github.com/openai/spinningup/)
-    https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail and
-    and Stable Baselines (PPO2 from https://github.com/hill-a/stable-baselines)
-    Introduction to PPO: https://spinningup.openai.com/en/latest/algorithms/ppo.html
-    :param policy: (ActorCriticPolicy or str) The policy model to use (MlpPolicy, CnnPolicy, ...)
-    :param env: (Gym environment or str) The environment to learn from (if registered in Gym, can be str)
-    :param learning_rate: (float or callable) The learning rate, it can be a function
-        of the current progress remaining (from 1 to 0)
-    :param n_steps: (int) The number of steps to run for each environment per update
-        (i.e. batch size is n_steps * n_env where n_env is number of environment copies running in parallel)
-    :param batch_size: (int) Minibatch size
-    :param n_epochs: (int) Number of epoch when optimizing the surrogate loss
-    :param gamma: (float) Discount factor
-    :param gae_lambda: (float) Factor for trade-off of bias vs variance for Generalized Advantage Estimator
-    :param clip_range: (float or callable) Clipping parameter, it can be a function of the current progress
-        remaining (from 1 to 0).
-    :param clip_range_vf: (float or callable) Clipping parameter for the value function,
-        it can be a function of the current progress remaining (from 1 to 0).
-        This is a parameter specific to the OpenAI implementation. If None is passed (default),
-        no clipping will be done on the value function.
-        IMPORTANT: this clipping depends on the reward scaling.
-    :param ent_coef: (float) Entropy coefficient for the loss calculation
-    :param vf_coef: (float) Value function coefficient for the loss calculation
-    :param max_grad_norm: (float) The maximum value for the gradient clipping
-    :param use_sde: (bool) Whether to use generalized State Dependent Exploration (gSDE)
-        instead of action noise exploration (default: False)
-    :param sde_sample_freq: (int) Sample a new noise matrix every n steps when using gSDE
-        Default: -1 (only sample at the beginning of the rollout)
-    :param target_kl: (float) Limit the KL divergence between updates,
-        because the clipping is not enough to prevent large update
-        see issue #213 (cf https://github.com/hill-a/stable-baselines/issues/213)
-        By default, there is no limit on the kl div.
-    :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
-    :param create_eval_env: (bool) Whether to create a second environment that will be
-        used for evaluating the agent periodically. (Only available when passing string for the environment)
-    :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
-    :param verbose: (int) the verbosity level: 0 no output, 1 info, 2 debug
-    :param seed: (int) Seed for the pseudo random generators
-    :param device: (str or th.device) Device (cpu, cuda, ...) on which the code should be run.
-        Setting it to auto, the code will be run on the GPU if possible.
-    :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
-    """
-
+class TorchPPOWMass(TorchPPO):
+    
     def __init__(
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
@@ -86,48 +41,33 @@ class TorchPPO(OnPolicyAlgorithm):
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
     ):
-
         super(TorchPPO, self).__init__(
-            policy,
-            env,
-            learning_rate=learning_rate,
-            n_steps=n_steps,
-            gamma=gamma,
-            gae_lambda=gae_lambda,
-            ent_coef=ent_coef,
-            vf_coef=vf_coef,
-            max_grad_norm=max_grad_norm,
-            use_sde=use_sde,
-            sde_sample_freq=sde_sample_freq,
-            tensorboard_log=tensorboard_log,
-            policy_kwargs=policy_kwargs,
-            verbose=verbose,
-            device=device,
-            create_eval_env=create_eval_env,
-            seed=seed,
-            _init_setup_model=False,
+        policy,
+        env,
+        learning_rate,
+        n_steps,
+        batch_size,
+        n_epochs,
+        gamma,
+        gae_lambda,
+        clip_range,
+        clip_range_vf,
+        ent_coef,
+        vf_coef,
+        max_grad_norm,
+        use_sde,
+        sde_sample_freq,
+        target_kl,
+        tensorboard_log,
+        create_eval_env,
+        policy_kwargs,
+        verbose,
+        seed,
+        device:,
+        _init_setup_model
         )
-
-        self.batch_size = batch_size
-        self.n_epochs = n_epochs
-        self.clip_range = clip_range
-        self.clip_range_vf = clip_range_vf
-        self.target_kl = target_kl
-
-        if _init_setup_model:
-            self._setup_model()
-
-    def _setup_model(self) -> None:
-        super(TorchPPO, self)._setup_model()
-
-        # Initialize schedules for policy/value clipping
-        self.clip_range = get_schedule_fn(self.clip_range)
-        if self.clip_range_vf is not None:
-            if isinstance(self.clip_range_vf, (float, int)):
-                assert self.clip_range_vf > 0, "`clip_range_vf` must be positive, " "pass `None` to deactivate vf clipping"
-
-            self.clip_range_vf = get_schedule_fn(self.clip_range_vf)
-
+        self.lstm_predictor = 
+        
     def train(self) -> None:
         """
         Update policy using the currently gathered
@@ -144,7 +84,7 @@ class TorchPPO(OnPolicyAlgorithm):
         entropy_losses, all_kl_divs = [], []
         pg_losses, value_losses = [], []
         clip_fractions = []
-
+        lstm_data = []
         # train for gradient_steps epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
@@ -236,7 +176,7 @@ class TorchPPO(OnPolicyAlgorithm):
         logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             logger.record("train/clip_range_vf", clip_range_vf)
-
+        
     def learn(
         self,
         total_timesteps: int,
@@ -260,4 +200,5 @@ class TorchPPO(OnPolicyAlgorithm):
             tb_log_name=tb_log_name,
             eval_log_path=eval_log_path,
             reset_num_timesteps=reset_num_timesteps,
+            rollout_buffer_kwargs={}
         )
