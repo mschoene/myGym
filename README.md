@@ -8,7 +8,7 @@ This repository has the aim to make a robot arm learn the importance of learning
 Please see our blog post for a detailed description and result analysis. 
 [blog post](https://thedingodile.github.io/Robotics/Weighing-My-Options.html)
 
-This repository is a clone of the [myGym], please refer to its documentation for further customizations. 
+This repository is a clone of the [myGym](https://github.com/incognite-lab/myGym), please refer to its documentation for further customizations. 
 
 ![alt text](myGym/weighingImg.png)
 
