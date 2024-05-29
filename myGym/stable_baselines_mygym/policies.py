@@ -76,7 +76,7 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
         action_space: spaces.Space,
         lr_schedule: Schedule,
         net_arch: Optional[Union[List[int], Dict[str, List[int] ] ]  ] = None,
-        activation_fn: Type[nn.Module] = nn.Tanh,
+        activation_fn: Type[nn.Module] = nn.ReLU, #nn.Tanh,
         ortho_init: bool = True,
         use_sde: bool = False,
         log_std_init: float = 0.0,
@@ -171,17 +171,12 @@ class RecurrentActorCriticPolicy2(RecurrentActorCriticPolicy):
             nn.Linear(in_features=64, out_features=64, bias=True),
             nn.Tanh()
         )
-        # Define the COM MLP
-        #com_net_arch = net_arch if net_arch is not None else [64, 64]
-        #self.com_mlp_extractor = MlpExtractor(self.features_dim, com_net_arch, activation_fn)
         
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
-        #output dimension 3
+        #output dimension 3 for 3 dof 
         self.com_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 3)
-        #self.com_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1)   
-        #self.com_net  = nn.Linear( 64, 3)
 
     def _build_mlp_extractor(self) -> None:
         """

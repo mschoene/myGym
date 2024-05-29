@@ -3885,7 +3885,7 @@ class FourStagePnPnStay(ThreeStagePnP):
     def reset(self):
         super(FourStagePnPnStay, self).reset()
         self.was_above = False
-        self.stay_timesteps = 50
+        self.stay_timesteps = 15 #15 seems more than enough for the 1/60 version. 50 for 1/240
         self.atGoal_timesteps = 0 #init counter to count up to  stay timesteps
         self.placed_obj = False
     
@@ -3968,7 +3968,7 @@ class FourStagePnPnStay(ThreeStagePnP):
             reward += 50. #give more reward for staying at the goal for extra incentive
         
         if(self.atGoal_timesteps >= self.stay_timesteps and self.placed_obj == True):
-            print("stayed 50 timesteps on target, successsssss")
+            print("stayed",self.stay_timesteps  , " timesteps on target, successsssss")
             self.env.episode_over = True #not sure if this i needed,  task.check_goal will check in any case
 
         if self.env.episode_steps <= 2:

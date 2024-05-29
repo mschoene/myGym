@@ -528,8 +528,10 @@ class GymEnv(CameraEnv):
         return self.observation["task_objects"]
 
     def get_true_com(self):
-        com = self.task_objects['actual_state'].centroid
-        return np.array(com)
+        #com = self.task_objects['actual_state'].centroid    # absolute shift, keeps moving with object
+        #com =  # relative shift
+        #print(com)
+        return np.array(self.task_objects['actual_state'].init_com_pos)
     
     def step(self, action):
         """

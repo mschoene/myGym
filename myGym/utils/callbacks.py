@@ -6,6 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import json
 import imageio
+from PIL import Image
 
 #from pygifsicle import optimize
 from typing import Union, List, Dict, Any, Optional
@@ -19,8 +20,28 @@ import warnings
 
 from stable_baselines.common.vec_env import VecEnv, sync_envs_normalization, DummyVecEnv
 from stable_baselines.common.evaluation import evaluate_policy
-
+from stable_baselines3.common.logger import Logger, configure
 #tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+def check_and_convert_images(images):
+    checked_images = []
+    for img in images:
+        pil_img = Image.fromarray(np.array(img))
+        if pil_img.mode != 'RGB':
+            pil_img = pil_img.convert('RGB')
+        checked_images.append(pil_img)
+    return checked_images
+
+def quantize_images(images, colors=256):
+    quantized_images = [img.quantize(colors=colors, method=Image.MAXCOVERAGE) for img in images]
+    return quantized_images
+
+def create_gif_with_pil(images, gif_path, duration=1000/15):
+    images[0].save(gif_path, save_all=True, append_images=images[1:], optimize=False, duration=duration, loop=0)
+
+def optimize_gif(gif_path):
+    os.system(f'./utils/gifopt -O3 --lossy=5 --colors=256 -o {gif_path} {gif_path}')
+
 
 class CustomEvalCallback(EvalCallback):
     """
@@ -53,7 +74,8 @@ class CustomEvalCallback(EvalCallback):
                  gui_on = True,
                  record=False,
                  camera_id=0,
-                 record_steps_limit=256): # pybullet or mujoco
+                 record_steps_limit=256,
+                 logger: Optional[Logger] = None): # pybullet or mujoco
         super(EvalCallback, self).__init__(callback_on_new_best, verbose=verbose)
         self.n_eval_episodes = n_eval_episodes
         self.algo_steps = algo_steps
@@ -84,6 +106,25 @@ class CustomEvalCallback(EvalCallback):
         self.evaluations_results = {}
         self.evaluations_timesteps = []
         self.evaluations_length = []
+        self.logger = logger or configure()
+
+    def _get_model_losses(self):
+        # Access the model's attributes to get the latest loss values
+        loss_dict = {}
+        if hasattr(self.model, 'policy'):
+            policy = self.model.policy
+            if hasattr(policy, 'entropy_loss'):
+                loss_dict['entropy_loss'] = policy.entropy_loss.item()
+            if hasattr(policy, 'value_loss'):
+                loss_dict['value_loss'] = policy.value_loss.item()
+            if hasattr(policy, 'policy_loss'):
+                loss_dict['policy_loss'] = policy.policy_loss.item()
+            # Assuming com_loss is also tracked similarly
+            if hasattr(policy, 'com_loss'):
+                loss_dict['com_loss'] = policy.com_loss.item()
+        return loss_dict
+    
+
 
     def evaluate_policy(
         self,
@@ -173,12 +214,24 @@ class CustomEvalCallback(EvalCallback):
             distance_error_sum += distance_error
 
         if self.record:
-            gif_path = os.path.join(self.log_path, "last_eval_episode_after_{}_steps.gif".format(self.n_calls))
-            imageio.mimsave(gif_path, [np.array(img) for i, img in enumerate(images) if i%2 == 0], fps=15)
-            #optimize(gif_path)
-            os.system('./utils/gifopt -O3 --lossy=5 -o {dest} {source}'.format(source=gif_path, dest=gif_path)) 
-            print("Record saved to " + gif_path)
+            #gif_path = os.path.join(self.log_path, "last_eval_episode_after_{}_steps.gif".format(self.n_calls))
 
+            ##pil_images = [Image.fromarray(np.array(img)) for i, img in enumerate(images) if i % 2 == 0]
+            ##pil_images[0].save(gif_path, save_all=True, append_images=pil_images[1:], optimize=False, duration=1000/15, loop=0)
+            ##pil_images = [Image.fromarray(np.array(img)) for i, img in enumerate(images) if i % 2 == 0]
+            ##pil_images[0].save(gif_path, save_all=True, append_images=pil_images[1:], duration=1000/15, loop=0)
+
+            #imageio.mimsave(gif_path, [np.array(img) for i, img in enumerate(images) if i%2 == 0], duration=15)
+            ##optimize(gif_path)
+            #os.system('./utils/gifopt --colors=256  -o {dest} {source}'.format(source=gif_path, dest=gif_path)) 
+            #print("Record saved to " + gif_path)
+
+            gif_path = os.path.join(self.log_path, f"last_eval_episode_after_{self.n_calls}_steps.gif")
+            checked_images = check_and_convert_images(images)
+            quantized_images = quantize_images(checked_images)
+            create_gif_with_pil(quantized_images, gif_path)
+            optimize_gif(gif_path)
+            print("Record saved to " + gif_path)
         
 
         meansr = np.mean(subrewards, axis=0)
@@ -278,6 +331,21 @@ class CustomEvalCallback(EvalCallback):
                 with open(os.path.join(self.log_path, filename), 'w') as f:
                     json.dump(self.evaluations_results, f, indent=4)
                 print("Evaluation stored after {} calls.".format(self.n_calls))    
+
+        #            # Log the evaluation results
+        #    for key, value in results.items():
+        #        self.logger.log(f"eval/{key}", str(value))
+        #        
+        #
+        #    # Log the latest losses from the model
+        #    loss_dict = self._get_model_losses()
+        #    for loss_name, loss_value in loss_dict.items():
+        #        self.logger.log(f"train/{loss_name}", loss_value)
+        #        print("getting losses? ")
+        #
+        #    #self.logger.dump(self.n_calls)
+
+
         return True
 
 
@@ -305,7 +373,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                  env="None",
                  stats_every=50,
                  save_success_graph_every_steps=40_000,
-                 save_model_every_steps=500_000,
+                 save_model_every_steps=200_000,
                  success_graph_mean_past_episodes=30,
                  multiprocessing=0):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
