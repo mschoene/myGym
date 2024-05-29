@@ -42,12 +42,12 @@
 "max_episode_steps" :256,
 "algo_steps"        :256,
 "steps"             :200000,
-"pretrained_model"  :"trained_models/pnp_franka_weighing_withCOMloss_relCOM_60fps_lastOne/pnp_table_panda_step_ppoRecurrCOM_2/best_model",
+"pretrained_model"  :null,
 "multiprocessing"   :false,
 #Evaluation #
 "eval_freq"     :10000,
 "eval_episodes" :20,
 #Saving and logging
-"logdir"    :"trained_models/pnp_franka_weighing_withCOMloss_relCOM_60fps_lastOne",
+"logdir"    :"trained_models/pnp_franka_weighing_withCOMloss",
 "record"    :0
 }

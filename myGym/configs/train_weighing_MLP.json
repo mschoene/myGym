@@ -34,20 +34,20 @@
 "distance_type" :"euclidean",
 "vae_path"      :null, 
 "yolact_path"   :null,
-"yolact_config" :null,
+"yolact_config" :null, 
 #Train
 "train_framework"   :"pytorch",
 "algo"              :"ppo",
 "num_networks" : 4,
 "max_episode_steps" :256,
 "algo_steps"        :256,
-"steps"             :256,
-"pretrained_model"  :"trained_models/pnp_franka_weighing_MLP_fromScratch/pnp_table_panda_step_ppo_4/best_model",
+"steps"             :400000,
+"pretrained_model"  :"trained_models/pnp_franka_weighing_MLP/best_model",
 "multiprocessing"   :false,
 #Evaluation #
-"eval_freq"     :256,
-"eval_episodes" :2,
+"eval_freq"     :50000,
+"eval_episodes" :20,
 #Saving and logging
-"logdir"    :"trained_models/pnp_franka_weighing_MLP_fromScratch_draw",
-"record"    :2
+"logdir"    :"trained_models/pnp_franka_weighing_MLP",
+"record"    :0
 }
