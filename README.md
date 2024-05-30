@@ -57,13 +57,27 @@ To run the training for the shared LSTM backbone model run:
 
 ## Approach 2
 
-Please checkout the second branch and run
+Please checkout the second branch 
 
+A dataset needs to be generated to train the LSTM, in the lstm_config put this value:
+
+`"use_model": false`
+
+and run the script, this will generate a dataset (and can be used as pre-training for the model, but is not necessary):
 
 `python train.py --config configs/train_test_MS.json`
 
-to train the second approach that trains two models.
+To train the lstm run, 
 
+`python3 train_lstm.py`
+
+To run the model with the lstm, change the value in the lstm_config file:
+
+`"use_model": true`
+
+and run
+
+`python train.py --config configs/train_test_MS.json`
 
 
 ## Original myGym Authors
